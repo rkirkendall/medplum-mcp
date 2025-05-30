@@ -1,6 +1,148 @@
-# Medplum MCP Implementation Plan
+# Medplum MCP Server
 
-This plan outlines the steps to build a Medplum Command Platform (MCP) for interacting with a Medplum FHIR server via a chat-based interface powered by an LLM. The MCP will provide tools for creating, reading, updating, and searching FHIR resources.
+## Project Description
+
+This project implements a Model Context Protocol (MCP) server for interacting with a Medplum FHIR server. The MCP server provides a standardized interface that allows Large Language Models (LLMs) to perform Create, Read, Update, and Search (CRUDS) operations on various FHIR resources through a suite of tools. This enables natural language commands to manage healthcare data stored in Medplum via the Model Context Protocol standard.
+
+The primary goal is to allow users to manage patient information by conversing with an LLM, which then translates these requests into specific actions on the FHIR server via the MCP tools.
+
+## Current Status
+
+This project is currently under active development. Core functionalities for managing Patient, Practitioner, and Organization resources have been implemented and tested.
+
+## Features Implemented
+
+The MCP server currently supports the following FHIR resource management tools:
+
+*   **Patient Tools (`src/tools/patientUtils.ts`)**:
+    *   `createPatient`
+    *   `getPatientById`
+    *   `updatePatient`
+    *   `searchPatients`
+*   **Practitioner Tools (`src/tools/practitionerUtils.ts`)**:
+    *   `createPractitioner`
+    *   `getPractitionerById`
+    *   `updatePractitioner`
+    *   `searchPractitionersByName` (specific name search)
+    *   `searchPractitioners` (general criteria search)
+*   **Organization Tools (`src/tools/organizationUtils.ts`)**:
+    *   `createOrganization`
+    *   `getOrganizationById`
+    *   `updateOrganization`
+    *   `searchOrganizations`
+
+Each tool is exposed to the LLM via a defined JSON schema and is callable through a test harness (`src/llm-test-harness.ts`).
+
+## Technology Stack
+
+*   **Runtime**: Node.js
+*   **Language**: TypeScript
+*   **FHIR Server Interaction**: `@medplum/core`, `@medplum/fhirtypes`
+*   **LLM Integration**: OpenAI API (specifically `gpt-4o` in the test harness)
+*   **Testing**: Jest (for integration tests), Manual E2E via test harness
+*   **Linting & Formatting**: ESLint, Prettier
+*   **Environment Management**: `dotenv`
+*   **HTTP Client (for Medplum SDK)**: `node-fetch`
+
+## Project Structure
+
+```
+medplum-mcp/
+├── src/
+│   ├── config/             # Medplum client configuration (medplumClient.ts)
+│   ├── tools/              # FHIR resource utility functions (patientUtils.ts, etc.)
+│   ├── lib/                # (Currently unused, for future shared libraries)
+│   ├── index.ts            # Main application entry point
+│   ├── llm-test-harness.ts # Script for testing LLM tool calling
+│   └── test-connection.ts  # Script for basic Medplum connection test
+├── tests/
+│   └── integration/        # Jest integration tests for tools
+├── .env.example            # Example environment file
+├── .eslintrc.js
+├── .gitignore
+├── .prettierrc.js
+├── .prettierignore
+├── package.json
+├── tsconfig.json
+└── README.md
+```
+
+## Setup and Configuration
+
+1.  **Prerequisites**:
+    *   Node.js (refer to `package.json` for engine specifics, though generally LTS versions)
+    *   A running Medplum server instance (e.g., local Dockerized instance at `http://localhost:8103/`).
+    *   Medplum client credentials (Client ID and Client Secret).
+
+2.  **Installation**:
+    ```bash
+    git clone https://github.com/rkirkendall/medplum-mcp.git
+    cd medplum-mcp
+    npm install
+    ```
+
+3.  **Environment Variables**:
+    Create a `.env` file in the project root by copying `.env.example`:
+    ```bash
+    cp .env.example .env
+    ```
+    Update the `.env` file with your Medplum server details:
+    ```
+    MEDPLUM_BASE_URL=http://your-medplum-server-url/
+    MEDPLUM_CLIENT_ID=your_client_id
+    MEDPLUM_CLIENT_SECRET=your_client_secret
+    OPENAI_API_KEY=your_openai_api_key # Required for llm-test-harness.ts
+    ```
+
+## Usage
+
+### Running the Application (Main Entry - `src/index.ts`)
+The main entry point `src/index.ts` is intended for future application logic (e.g., a chat server). Currently, it might contain basic setup or be minimal.
+```bash
+npm start # (Runs compiled JS from outDir)
+npm run dev # (Runs TypeScript using ts-node-dev for development)
+```
+
+### LLM Test Harness
+To test the interaction between natural language queries, the LLM (OpenAI), and the implemented Medplum tools:
+```bash
+npm run test:harness # Assuming a script is added to package.json for this
+# or directly:
+# npx ts-node src/llm-test-harness.ts
+```
+The harness (`src/llm-test-harness.ts`) contains example queries that trigger various tools.
+
+### Basic Connection Test
+To verify the connection to your Medplum server and client authentication:
+```bash
+npm run test:connection
+```
+
+## Testing
+
+### Linting and Formatting
+```bash
+npm run lint
+npm run format
+```
+
+### Integration Tests
+Integration tests use Jest and interact with a live Medplum instance (configured via `.env`).
+To run all integration tests:
+```bash
+npx jest tests/integration
+```
+To run specific integration test files:
+```bash
+npx jest tests/integration/patient.integration.test.ts
+npx jest tests/integration/practitioner.integration.test.ts
+npx jest tests/integration/organization.integration.test.ts
+```
+
+
+# Medplum MCP Server Implementation Plan
+
+This plan outlines the steps to build a Model Context Protocol (MCP) server for interacting with a Medplum FHIR server via a chat-based interface powered by an LLM. The MCP server will provide standardized tools for creating, reading, updating, and searching FHIR resources.
 
 **General Workflow Note:** After completing each phase or significant step that results in runnable code or configuration changes, we will identify and execute relevant test or verification commands. For commands requiring interaction with the local Medplum instance or user-specific setup, I will prompt you to run them and then analyze the output you provide. For self-contained checks (e.g., linting), I may run the command directly.
 
@@ -62,7 +204,7 @@ This plan outlines the steps to build a Medplum Command Platform (MCP) for inter
         - Verify that the LLM attempts to call the correct tool with the correct parameters.
         - This forms the first test in our iterative LLM integration suite. (Included several test queries in `llm-test-harness.ts` `main` function, verified LLM tool selection and parameter extraction)
 
-## Phase 2: Core FHIR Resource Tools (MCP Tools)
+## Phase 2: Core FHIR Resource Tools (MCP Server Tools)
 
 For each resource, we need tools for `create`, `readById`, `update`, and `search`. Each tool should be a well-defined function in `src/tools/`.
 
@@ -191,23 +333,23 @@ For each resource, we need tools for `create`, `readById`, `update`, and `search
 
 - [x] **LLM Request Handling in MCP (via Test Harness)**
     - Notes: `src/llm-test-harness.ts` serves as the current entry point. It processes natural language queries, invokes the LLM with tool schemas, and executes the chosen tool by calling the corresponding TypeScript function.
-    - It parses the LLM's tool call, validates (implicitly by checking `availableTools`), calls the MCP tool, and logs the result.
+    - It parses the LLM's tool call, validates (implicitly by checking `availableTools`), calls the MCP server tool, and logs the result.
 
 - [ ] **Natural Language to Tool Parameter Mapping Strategy**
     - Notes: This is largely an LLM task (using the tool schemas), but the MCP tool design should facilitate this.
     - The LLM needs to extract entities like "Dr. Stevens", "PCP", "x-ray", "sed test", "steroids", "rheumatologist" and map them to the correct parameters for the MCP tools.
     - For "PCP", the LLM might first call `searchPractitioners` with name "Stevens" and then the application logic (or LLM itself) might need to confirm if this is the PCP, potentially by checking `Encounter` history or `EpisodeOfCare.careManager`.
 
-- [ ] **Clarifying Questions Logic (MCP Support)**
+- [ ] **Clarifying Questions Logic (MCP Server Support)**
     - Notes: If the LLM cannot fill all required parameters for a tool, or if there's ambiguity, it needs to ask the user.
-    - The MCP might need to support this by:
+    - The MCP server might need to support this by:
         - Tools returning information that helps the LLM formulate a question (e.g., if a search returns multiple practitioners).
         - Potentially, tools that can present options to the user via the LLM (e.g., "Did you mean Dr. John Stevens or Dr. Jane Stevens?").
 
 - [ ] **Context Management & Resource Linking**
     - Notes:
         - The LLM needs to maintain conversation context to understand references like "his PCP", "the osteodoctor from last week".
-        - When creating new resources (e.g., an `Observation` for the sed test), the MCP tools must accept parameters to link them to existing resources (e.g., `encounterId`, `patientId`).
+        - When creating new resources (e.g., an `Observation` for the sed test), the MCP server tools must accept parameters to link them to existing resources (e.g., `encounterId`, `patientId`).
         - Example flow for "Dr. Stevens ordered a blood panel":
             1. LLM identifies "Dr. Stevens" -> `searchPractitioners(name: 'Stevens')` -> gets Practitioner ID.
             2. LLM identifies "blood panel", "sed test" -> maps to Observation codes.
@@ -216,7 +358,7 @@ For each resource, we need tools for `create`, `readById`, `update`, and `search
             5. The `EpisodeOfCare` for the father should be identified or created, and the new `Encounter` linked to it.
 
 - [ ] **Error Handling and Feedback to LLM**
-    - Notes: MCP tools should return clear success/failure messages and any relevant data or error details. The LLM will use this to inform the user or adjust its strategy.
+    - Notes: MCP server tools should return clear success/failure messages and any relevant data or error details. The LLM will use this to inform the user or adjust its strategy.
 
 ## Phase 4: Advanced Features & Refinements
 
@@ -226,10 +368,10 @@ For each resource, we need tools for `create`, `readById`, `update`, and `search
         - Otherwise, this might involve fetching relevant resources and then using an embedding model + vector search locally within the MCP or as a separate microservice if searching large amounts of text data (e.g., clinical notes, though this example focuses on structured data). For now, focus on Medplum's built-in search.
         - "User mentions a 'doctor tom' so we do a provider search on a doc w first name 'tom'" will primarily use `searchPractitioners` with appropriate name parameters.
 
-- [ ] **Complex Utterance Decomposition (Primarily LLM task, MCP enables)**
-    - Notes: The example sentence is complex: "today my dad saw Dr. Stevens, his PCP, and he showed him the x-ray that the osteodoctor from last week took. So then Dr. Stevens ordered a blood panel that included a sed test and said that, you know, when the results come in tomorrow, he will make a determination whether to write a prescription for more steroids or to refer him to a rheumatologist."
+- [ ] **Complex Utterance Decomposition (Primarily LLM task, MCP server enables)**
+    - Notes: This involves handling complex user utterances that require breaking down the request into a series of actions and tool calls. For example, processing a sentence that includes multiple actors, actions, and references to past events.
     - The LLM needs to break this down into a sequence of actions/tool calls:
-        1. Identify/Create Patient ("my dad").
+        1. Identify/Create Patient (e.g., based on conversational context).
         2. Identify/Create Practitioner ("Dr. Stevens", "PCP").
         3. Create Encounter for today with Patient and Dr. Stevens.
         4. Identify/Reference existing Observation ("x-ray from osteodoctor last week"). This implies a previous encounter and observation that need to be found.
@@ -238,38 +380,22 @@ For each resource, we need tools for `create`, `readById`, `update`, and `search
         7. Log future potential actions (MedicationRequest for steroids, Referral to rheumatologist - potentially as `ServiceRequest` resources or notes within the `Encounter` or `EpisodeOfCare`).
 
 - [x] **Testing Strategy**
-    - [] Unit tests for each MCP tool (using Jest/ts-jest, with Medplum SDK calls mocked).
+    - [] Unit tests for each MCP server tool (using Jest/ts-jest, with Medplum SDK calls mocked).
     - [x] Integration tests: Connect to the local Dockerized Medplum. Created `practitioner.integration.test.ts` and `patient.integration.test.ts` which test create, read, update, search against a live Medplum instance.
     - [x] E2E testing (manual for now): Converse with the LLM (via `llm-test-harness.ts`) and verify data in Medplum (implicitly done through observing successful tool calls and results).
 
 - [x] **Expand and Iterate on LLM Integration Tests (via `llm-test-harness.ts`)**
     - Notes: (Marking as complete for current scope of tools; this is an ongoing process as new tools are added)
-        - Continuously update and expand the test harness and test cases developed in Phase 1.5 as new MCP tools are built.
-        - **Test individual tool calls:** Ensure the LLM correctly identifies and calls individual MCP tools based on a variety of simple natural language prompts. Verify parameter extraction and mapping. (Done for Patient & Practitioner tools).
+        - Continuously update and expand the test harness and test cases developed in Phase 1.5 as new MCP server tools are built.
+        - **Test individual tool calls:** Ensure the LLM correctly identifies and calls individual MCP server tools based on a variety of simple natural language prompts. Verify parameter extraction and mapping. (Done for Patient & Practitioner tools).
         - **Test sequential/complex tool calls:** Develop scenarios where the LLM must make multiple tool calls in sequence. This includes using the output of one tool call as input for another to fulfill a complex user request (e.g., the detailed example utterance). (Partially done via create -> get/update/search sequence in harness).
-        - **Test context handling:** Ensure the LLM, with the support of the MCP and conversation history, can correctly resolve references (e.g., "his PCP," "that medication").
-        - **Test clarifying questions:** If tools are designed to help LLMs ask clarifying questions, test these scenarios.
+        - **Test context handling:** Ensure the LLM, with the support of the MCP server and conversation history, can correctly resolve references (e.g., "his PCP," "that medication").
 
 ## Phase 5: Deployment & Operations (Future Consideration)
 
-- [ ] **Containerize MCP (Optional)**
-    - Notes: If the MCP becomes a standalone service.
+- [ ] **Containerize MCP Server (Optional)**
+    - Notes: If the MCP server becomes a standalone service.
 - [ ] **Logging and Monitoring**
     - Notes: Track tool usage, errors, performance.
 - [ ] **Security and Compliance**
     - Notes: Ensure all interactions with Medplum are secure, and data handling complies with HIPAA if applicable. OAuth for Medplum client.
-
-## Broader Application Context (Future Considerations)
-
-- **Application-Layer Database for Caretaker-Specific Information:**
-    - For a full-fledged caretaking application, an intermediary database will likely be necessary. This database would reside alongside the Medplum EHR and the MCP.
-    - **Purpose:** Store information specific to the caretaker and their use of the application, which doesn't belong in the patient-centric EHR.
-    - **Examples of data stored:**
-        - User accounts for the caretaking app.
-        - Mappings of colloquial references (e.g., "my dad," "Dr. Smith") to specific FHIR resource IDs (Patient IDs, Practitioner IDs) in Medplum. This allows for natural language disambiguation.
-        - Caretaker preferences, notes, or relationships that are not part of the formal medical record.
-    - **Interaction:** The LLM or application logic would query this database first to resolve user-specific references before using the MCP tools to interact with the EHR.
-    - **Tools:** This application layer might have its own set of tools (e.g., `resolve_user_reference`, `get_caretaker_preferences`) that would be used by the LLM in conjunction with the MCP tools that target the EHR.
-    - **Scope:** While the design and implementation of this application-layer database and its associated tools are out of scope for the initial MCP-EHR integration project detailed above, it's a key component of the envisioned end-to-end chat-based caretaking application.
-
-This plan provides a high-level roadmap. Each checkbox represents a significant task that may involve further sub-tasks and design decisions. The "Notes" field should be updated by the AI engineering agent as each step is implemented, detailing choices made, challenges encountered, and specific Medplum SDK features or patterns used. 
