@@ -56,24 +56,4 @@ export async function searchPractitionersByName(
 }
 
 // Example Usage (for testing directly, can be removed later):
-
-async function testSearch() {
-  // Make sure your .env file is set up for authentication
-  const testParams: PractitionerSearchParams = { name: 'James Chalmers' }; // Or use given/family
-  // const testParams: PractitionerSearchParams = { familyName: 'Smith' };
-  const results = await searchPractitionersByName(testParams);
-  if (results.length > 0) {
-    results.forEach((p) => {
-      const officialName = p.name?.find(n => n.use === 'official');
-      console.log(
-        `Practitioner ID: ${p.id}, Name: ${
-          officialName ? `${officialName.given?.join(' ')} ${officialName.family}` : 'N/A'
-        }`
-      );
-    });
-  } else {
-    console.log('No practitioners found with the given criteria.');
-  }
-}
-
-testSearch(); 
+// The testSearch function and its call have been moved to the integration test suite. 

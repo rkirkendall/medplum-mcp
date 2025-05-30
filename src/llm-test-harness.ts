@@ -1,7 +1,14 @@
 import OpenAI from 'openai';
 import { toolSchemas } from './tools/toolSchemas';
 import { searchPractitionersByName } from './tools/practitionerSearch';
-import { Practitioner } from '@medplum/fhirtypes';
+import {
+  createPatient,
+  getPatientById,
+  updatePatient,
+  searchPatients,
+  CreatePatientArgs, // This specific interface might not be directly used by LLM but good for our own type safety if we had other internal calls.
+} from './tools/patientUtils';
+import { Patient } from '@medplum/fhirtypes'; // Practitioner is imported in practitionerSearch.ts
 import dotenv from 'dotenv';
 
 dotenv.config();
@@ -14,6 +21,10 @@ const openai = new OpenAI({
 // to the actual function implementation.
 const availableTools: Record<string, (...args: any[]) => Promise<any>> = {
   searchPractitionersByName: searchPractitionersByName,
+  createPatient: createPatient,
+  getPatientById: getPatientById,
+  updatePatient: updatePatient,
+  searchPatients: searchPatients,
   // Future tools will be added here
 };
 
@@ -52,6 +63,7 @@ async function processNaturalLanguageQuery(query: string): Promise<any> {
       messages: messages,
       tools: tools.length > 0 ? tools : undefined,
       tool_choice: tools.length > 0 ? 'auto' : undefined, // 'auto' lets the model decide, or specify a tool
+      temperature: 0.2, // Added temperature setting
     });
 
     const responseMessage = response.choices[0].message;
@@ -67,15 +79,26 @@ async function processNaturalLanguageQuery(query: string): Promise<any> {
 
       const toolToExecute = availableTools[toolName];
       if (toolToExecute) {
-        // Before calling the tool, we might need to append its result back to the messages
-        // and make another API call for the LLM to generate a human-readable response.
-        // For now, let's just execute and return the direct result.
-        const toolResult = await toolToExecute(toolArguments);
+        let toolResult;
+        // Adjust how arguments are passed based on the tool being called
+        if (toolName === 'getPatientById') {
+          toolResult = await toolToExecute(toolArguments.patientId);
+        } else if (toolName === 'updatePatient') {
+          // Construct the updates object from any arguments other than patientId
+          const { patientId, ...updatesObject } = toolArguments;
+          console.log(`Constructed updates for updatePatient:`, updatesObject);
+          toolResult = await toolToExecute(patientId, updatesObject);
+        } else if (toolName === 'createPatient' || toolName === 'searchPatients' || toolName === 'searchPractitionersByName') {
+          // These tools expect the whole argument object as their first parameter
+          toolResult = await toolToExecute(toolArguments);
+        } else {
+          // Default behavior for other tools (if any) - might need adjustment
+          console.warn(`Tool ${toolName} called with generic argument passing.`);
+          toolResult = await toolToExecute(toolArguments);
+        }
+        
         console.log(`Result from ${toolName}:`, toolResult);
 
-        // Here, you would typically send the tool result back to the LLM
-        // to get a natural language summary. For this test harness,
-        // we'll just return the raw tool result.
         return {
           processed: true,
           tool_called: toolName,
@@ -106,32 +129,78 @@ async function main() {
   // Example 1: Query that should trigger the practitioner search
   const query1 = 'Can you find a doctor whose last name is Smith?';
   const result1 = await processNaturalLanguageQuery(query1);
-  console.log('\n--- Test Case 1 Result ---');
+  console.log('\n--- Test Case 1 (Practitioner Search) Result ---');
   console.log(JSON.stringify(result1, null, 2));
-  console.log('--------------------------\n');
+  console.log('---------------------------------------------\n');
 
-  // Example 2: A query that might use a different parameter
+  // Example 2: A query that might use a different parameter for practitioner search
   const query2 = 'Search for a practitioner named Dr. James Chalmers.';
   const result2 = await processNaturalLanguageQuery(query2);
-  console.log('\n--- Test Case 2 Result ---');
+  console.log('\n--- Test Case 2 (Practitioner Search by Full Name) Result ---');
   console.log(JSON.stringify(result2, null, 2));
-  console.log('--------------------------\n');
+  console.log('-------------------------------------------------------------\n');
   
   // Example 3: Query that might not trigger a tool
   const query3 = 'Hello, how are you today?';
   const result3 = await processNaturalLanguageQuery(query3);
-  console.log('\n--- Test Case 3 Result ---');
+  console.log('\n--- Test Case 3 (No Tool) Result ---');
   console.log(JSON.stringify(result3, null, 2));
-  console.log('--------------------------\n');
+  console.log('----------------------------------\n');
 
-
-  // Example with potential no practitioner found.
-  // (Assuming 'NonExistentName' is unlikely to be in your test data)
+  // Example 4: Query for practitioner search that should find no results
   const query4 = "I'm looking for a practitioner with the family name NonExistentName";
   const result4 = await processNaturalLanguageQuery(query4);
-  console.log('\n--- Test Case 4 Result (No Practitioner Expected) ---');
+  console.log('\n--- Test Case 4 (Practitioner Search - No Results Expected) Result ---');
   console.log(JSON.stringify(result4, null, 2));
-  console.log('----------------------------------------------------\n');
+  console.log('---------------------------------------------------------------------\n');
+
+  // --- New Test Cases for Patient Tools ---
+
+  // Test Case 5: Create a new patient
+  const query5 = "Please create a new patient named Alice Wonderland, born on July 10th, 1985, gender female.";
+  const result5 = await processNaturalLanguageQuery(query5);
+  console.log('\n--- Test Case 5 (Create Patient) Result ---');
+  console.log(JSON.stringify(result5, null, 2));
+  console.log('-----------------------------------------\n');
+
+  let createdPatientIdForFollowUp: string | undefined;
+  if (result5.processed && result5.tool_called === 'createPatient' && result5.result?.id) {
+    createdPatientIdForFollowUp = result5.result.id;
+    console.log(`Patient created with ID: ${createdPatientIdForFollowUp} - will use for get/update tests.`);
+  }
+
+  // Test Case 6: Search for the created patient by name
+  const query6 = "Can you find patients whose family name is Wonderland?";
+  const result6 = await processNaturalLanguageQuery(query6);
+  console.log('\n--- Test Case 6 (Search Patient by Name) Result ---');
+  console.log(JSON.stringify(result6, null, 2));
+  console.log('-------------------------------------------------\n');
+
+  // Test Case 7: Get patient by ID (using ID from Test Case 5 if available)
+  if (createdPatientIdForFollowUp) {
+    const query7 = `Get me the details for patient with ID ${createdPatientIdForFollowUp}.`;
+    const result7 = await processNaturalLanguageQuery(query7);
+    console.log('\n--- Test Case 7 (Get Patient By ID) Result ---');
+    console.log(JSON.stringify(result7, null, 2));
+    console.log('--------------------------------------------\n');
+
+    // Test Case 8: Update the created patient
+    const query8 = `Update patient ${createdPatientIdForFollowUp}, set their birth date to 1990-02-02 and gender to female.`;
+    const result8 = await processNaturalLanguageQuery(query8);
+    console.log('\n--- Test Case 8 (Update Patient) Result ---');
+    console.log(JSON.stringify(result8, null, 2));
+    console.log('-----------------------------------------\n');
+  } else {
+    console.log('\n--- Skipping Test Cases 7 & 8 (Get/Update Patient) because patient creation failed or ID was not retrieved ---\n');
+  }
+
+  // Test Case 9: Search for patients by a different criteria (e.g., part of a name)
+  const query9 = "I'm looking for patients with the first name Alice.";
+  const result9 = await processNaturalLanguageQuery(query9);
+  console.log('\n--- Test Case 9 (Search Patient by Given Name) Result ---');
+  console.log(JSON.stringify(result9, null, 2));
+  console.log('-------------------------------------------------------\n');
+
 }
 
 main().catch(console.error); 
