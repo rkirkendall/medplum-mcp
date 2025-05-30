@@ -1,6 +1,18 @@
 import OpenAI from 'openai';
 import { toolSchemas } from './tools/toolSchemas';
-import { searchPractitionersByName } from './tools/practitionerSearch';
+import {
+  searchPractitionersByName,
+  createPractitioner,
+  getPractitionerById,
+  updatePractitioner,
+  searchPractitioners,
+} from './tools/practitionerUtils';
+import {
+  createOrganization,
+  getOrganizationById,
+  updateOrganization,
+  searchOrganizations,
+} from './tools/organizationUtils';
 import {
   createPatient,
   getPatientById,
@@ -21,10 +33,18 @@ const openai = new OpenAI({
 // to the actual function implementation.
 const availableTools: Record<string, (...args: any[]) => Promise<any>> = {
   searchPractitionersByName: searchPractitionersByName,
+  createPractitioner: createPractitioner,
+  getPractitionerById: getPractitionerById,
+  updatePractitioner: updatePractitioner,
+  searchPractitioners: searchPractitioners,
   createPatient: createPatient,
   getPatientById: getPatientById,
   updatePatient: updatePatient,
   searchPatients: searchPatients,
+  createOrganization: createOrganization,
+  getOrganizationById: getOrganizationById,
+  updateOrganization: updateOrganization,
+  searchOrganizations: searchOrganizations,
   // Future tools will be added here
 };
 
@@ -81,14 +101,21 @@ async function processNaturalLanguageQuery(query: string): Promise<any> {
       if (toolToExecute) {
         let toolResult;
         // Adjust how arguments are passed based on the tool being called
-        if (toolName === 'getPatientById') {
-          toolResult = await toolToExecute(toolArguments.patientId);
-        } else if (toolName === 'updatePatient') {
-          // Construct the updates object from any arguments other than patientId
-          const { patientId, ...updatesObject } = toolArguments;
-          console.log(`Constructed updates for updatePatient:`, updatesObject);
-          toolResult = await toolToExecute(patientId, updatesObject);
-        } else if (toolName === 'createPatient' || toolName === 'searchPatients' || toolName === 'searchPractitionersByName') {
+        if (toolName === 'getPatientById' || toolName === 'getPractitionerById' || toolName === 'getOrganizationById') {
+          toolResult = await toolToExecute(toolArguments.patientId || toolArguments.practitionerId || toolArguments.organizationId);
+        } else if (toolName === 'updatePatient' || toolName === 'updatePractitioner' || toolName === 'updateOrganization') {
+          const { patientId, practitionerId, organizationId, ...updatesObject } = toolArguments;
+          console.log(`Constructed updates for ${toolName}:`, updatesObject);
+          toolResult = await toolToExecute(patientId || practitionerId || organizationId, updatesObject);
+        } else if (
+          toolName === 'createPatient' ||
+          toolName === 'searchPatients' ||
+          toolName === 'searchPractitionersByName' ||
+          toolName === 'createPractitioner' ||
+          toolName === 'searchPractitioners' ||
+          toolName === 'createOrganization' ||
+          toolName === 'searchOrganizations'
+        ) {
           // These tools expect the whole argument object as their first parameter
           toolResult = await toolToExecute(toolArguments);
         } else {
@@ -155,6 +182,7 @@ async function main() {
   console.log('---------------------------------------------------------------------\n');
 
   // --- New Test Cases for Patient Tools ---
+  console.log('\n\n--- STARTING PATIENT TOOL TESTS ---\n');
 
   // Test Case 5: Create a new patient
   const query5 = "Please create a new patient named Alice Wonderland, born on July 10th, 1985, gender female.";
@@ -200,6 +228,93 @@ async function main() {
   console.log('\n--- Test Case 9 (Search Patient by Given Name) Result ---');
   console.log(JSON.stringify(result9, null, 2));
   console.log('-------------------------------------------------------\n');
+
+  // --- New Test Cases for Practitioner Tools (added now) ---
+  console.log('\n\n--- STARTING PRACTITIONER TOOL TESTS ---\n');
+  let createdPractitionerIdForFollowUp: string | undefined;
+
+  // Test Case 10: Create a new practitioner
+  const query10 = "Register a new doctor: Dr. Evelyn Reed, family name Reed, given name Evelyn.";
+  const result10 = await processNaturalLanguageQuery(query10);
+  console.log('\n--- Test Case 10 (Create Practitioner) Result ---');
+  console.log(JSON.stringify(result10, null, 2));
+  console.log('--------------------------------------------\n');
+  if (result10.processed && result10.tool_called === 'createPractitioner' && result10.result?.id) {
+    createdPractitionerIdForFollowUp = result10.result.id;
+    console.log(`Practitioner created with ID: ${createdPractitionerIdForFollowUp} - will use for get/update/search tests.`);
+  }
+
+  // Test Case 11: Get practitioner by ID
+  if (createdPractitionerIdForFollowUp) {
+    const query11 = `Show me details for practitioner ID ${createdPractitionerIdForFollowUp}.`;
+    const result11 = await processNaturalLanguageQuery(query11);
+    console.log('\n--- Test Case 11 (Get Practitioner By ID) Result ---');
+    console.log(JSON.stringify(result11, null, 2));
+    console.log('-------------------------------------------------\n');
+
+    // Test Case 12: Update practitioner
+    const query12 = `Update Dr. Reed (ID ${createdPractitionerIdForFollowUp}) to be active and add a work phone: 555-987-6543.`;
+    const result12 = await processNaturalLanguageQuery(query12);
+    console.log('\n--- Test Case 12 (Update Practitioner) Result ---');
+    console.log(JSON.stringify(result12, null, 2));
+    console.log('---------------------------------------------\n');
+  } else {
+    console.log('\n--- Skipping Test Cases 11 & 12 (Get/Update Practitioner) due to creation failure ---\n');
+  }
+
+  // Test Case 13: Search practitioners (general search)
+  const query13 = "Find practitioners with family name Reed.";
+  const result13 = await processNaturalLanguageQuery(query13);
+  console.log('\n--- Test Case 13 (Search Practitioners - General) Result ---');
+  console.log(JSON.stringify(result13, null, 2));
+  console.log('----------------------------------------------------------\n');
+
+  // Test Case 14: Search practitioners by specialty (example, adapt if specialty not on schema/test data)
+  // const query14 = "Search for cardiologists.";
+  // const result14 = await processNaturalLanguageQuery(query14);
+  // console.log('\n--- Test Case 14 (Search Practitioners by Specialty) Result ---');
+  // console.log(JSON.stringify(result14, null, 2));
+  // console.log('------------------------------------------------------------\n');
+
+  // --- New Test Cases for Organization Tools ---
+  console.log('\n\n--- STARTING ORGANIZATION TOOL TESTS ---\n');
+  let createdOrgIdForFollowUp: string | undefined;
+
+  // Test Case 15: Create a new organization
+  const query15 = "Register a new hospital called 'General Hospital of Anytown'. Its alias is GHA.";
+  const result15 = await processNaturalLanguageQuery(query15);
+  console.log('\n--- Test Case 15 (Create Organization) Result ---');
+  console.log(JSON.stringify(result15, null, 2));
+  console.log('--------------------------------------------\n');
+  if (result15.processed && result15.tool_called === 'createOrganization' && result15.result?.id) {
+    createdOrgIdForFollowUp = result15.result.id;
+    console.log(`Organization created with ID: ${createdOrgIdForFollowUp} - will use for get/update/search tests.`);
+  }
+
+  // Test Case 16: Get organization by ID
+  if (createdOrgIdForFollowUp) {
+    const query16 = `Get me details for organization ID ${createdOrgIdForFollowUp}.`;
+    const result16 = await processNaturalLanguageQuery(query16);
+    console.log('\n--- Test Case 16 (Get Organization By ID) Result ---');
+    console.log(JSON.stringify(result16, null, 2));
+    console.log('-------------------------------------------------\n');
+
+    // Test Case 17: Update organization
+    const query17 = `Update 'General Hospital of Anytown' (ID ${createdOrgIdForFollowUp}) and change its name to 'Anytown Community Hospital' and add alias ACH.`;
+    const result17 = await processNaturalLanguageQuery(query17);
+    console.log('\n--- Test Case 17 (Update Organization) Result ---');
+    console.log(JSON.stringify(result17, null, 2));
+    console.log('---------------------------------------------\n');
+  } else {
+    console.log('\n--- Skipping Test Cases 16 & 17 (Get/Update Organization) due to creation failure ---\n');
+  }
+
+  // Test Case 18: Search organizations
+  const query18 = "Find organizations with the name 'Anytown Community Hospital'.";
+  const result18 = await processNaturalLanguageQuery(query18);
+  console.log('\n--- Test Case 18 (Search Organizations) Result ---');
+  console.log(JSON.stringify(result18, null, 2));
+  console.log('--------------------------------------------------\n');
 
 }
 

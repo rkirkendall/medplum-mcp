@@ -1,32 +1,172 @@
 export const toolSchemas = [
   {
     name: 'searchPractitionersByName',
-    description: 'Searches for Practitioner resources based on name criteria. Returns a list of practitioners. You must provide at least one of the following parameters: givenName, familyName, or name.',
+    description: "Searches for medical practitioners (doctors, nurses, etc.) based on their given name, family name, or a general name string. Provide at least one name component.",
     input_schema: {
       type: 'object',
       properties: {
         givenName: {
           type: 'string',
-          description: "The practitioner\'s given name. Use this if the user specifies a first name.",
+          description: "The practitioner\'s given (first) name. Optional.",
         },
         familyName: {
           type: 'string',
-          description: "The practitioner\'s family name. Use this if the user specifies a last name.",
+          description: "The practitioner\'s family (last) name. Optional.",
         },
         name: {
           type: 'string',
-          description:
-            'A general name search string for the practitioner. This can be used to search across given, family, prefix, suffix, etc. Use this if a specific given or family name is not clear, or if a full name is provided.',
+          description: "A general name search string for the practitioner (e.g., \'Dr. John Smith\', \'Smith\'). Optional.",
         },
       },
-      // OpenAI does not support anyOf at the top level for function parameters.
-      // The requirement for at least one parameter is now in the main description.
-      // We also remove additionalProperties: false for now, as it might be too restrictive
-      // without a more complex schema or further validation logic post-LLM.
-      required: [], // No individual property is strictly required on its own, but the function needs at least one.
+      required: [], // Function logic handles requiring at least one param
     },
-    // We can expand this later to describe the output structure if needed
-    // output_schema: { ... } 
+  },
+  {
+    name: 'createPractitioner',
+    description: 'Creates a new medical practitioner. Requires given name and family name.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        givenName: { type: 'string', description: "The practitioner\'s given (first) name." },
+        familyName: { type: 'string', description: "The practitioner\'s family (last) name." },
+        // Optional: Add more properties like identifier, telecom, address as needed by LLM
+        // For example:
+        // identifierValue: { type: 'string', description: "An identifier for the practitioner (e.g., NPI)." },
+        // identifierSystem: { type: 'string', description: "The system for the identifier (e.g., 'http://hl7.org/fhir/sid/us-npi')." }
+      },
+      required: ['givenName', 'familyName'],
+    },
+  },
+  {
+    name: 'getPractitionerById',
+    description: 'Retrieves a practitioner resource by their unique ID.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        practitionerId: { type: 'string', description: 'The unique ID of the practitioner to retrieve.' },
+      },
+      required: ['practitionerId'],
+    },
+  },
+  {
+    name: 'updatePractitioner',
+    description: "Updates an existing practitioner\'s information. Requires the practitioner\'s ID and the fields to update.",
+    input_schema: {
+      type: 'object',
+      properties: {
+        practitionerId: { type: 'string', description: "The unique ID of the practitioner to update." },
+        // Add properties for fields that can be updated, e.g.:
+        // active: { type: 'boolean', description: "Set the practitioner as active or inactive." },
+        // telecomValue: { type: 'string', description: "New phone number or email." },
+        // telecomSystem: { type: 'string', description: "System for the telecom (phone, email)." },
+        // givenName: { type: 'string', description: "New given name for the practitioner (note: full name update might be complex)." },
+        // familyName: { type: 'string', description: "New family name." }
+        // For simplicity, LLM can provide a flat structure of updates.
+        // The function `updatePractitioner` expects a structure like UpdatePractitionerArgs or Omit<Partial<Practitioner>, 'resourceType' | 'id'>
+        // The LLM should be guided to provide relevant top-level fields from Practitioner resource that are updatable.
+        // Example based on UpdatePractitionerArgs (simplified for LLM):
+        active: { type: 'boolean', description: 'Update active status.', optional: true },
+        telecom: { 
+          type: 'array', 
+          items: { 
+            type: 'object', 
+            properties: { 
+              system: { type: 'string', enum: ['phone', 'email', 'fax', 'pager', 'sms', 'other'] }, 
+              value: { type: 'string' }, 
+              use: { type: 'string', enum: ['home', 'work', 'temp', 'old', 'mobile'] , optional: true}
+            },
+            required: ['system', 'value']
+          },
+          description: "Contact details (phone, email, etc.). Provide an array of telecom entries.", optional: true
+        },
+        address: { 
+          type: 'array', 
+          items: { 
+            type: 'object',
+            // Simplified address properties for LLM
+            properties: { 
+              line: { type: 'array', items: {type: 'string'}, description: "Street lines, e.g. [\'123 Main St\']" },
+              city: { type: 'string' },
+              state: { type: 'string' },
+              postalCode: { type: 'string' },
+              country: { type: 'string', optional: true }
+            },
+            required: ['line', 'city', 'state', 'postalCode']
+          },
+          description: "Addresses for the practitioner. Provide an array of address entries.", optional: true
+        }
+        // Other fields like `name` (full array) could be complex for LLM, better to stick to simpler fields or use specific functions for name changes if needed.
+      },
+      required: ['practitionerId'], // At least one update field should be implicitly required by the user's intent
+    },
+  },
+  {
+    name: 'searchPractitioners',
+    description: 'Searches for practitioners based on various criteria like name, specialty, or identifier.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        name: { type: 'string', description: "A general name search string.", optional: true },
+        given: { type: 'string', description: "The practitioner\'s given (first) name.", optional: true },
+        family: { type: 'string', description: "The practitioner\'s family (last) name.", optional: true },
+        specialty: { type: 'string', description: "The practitioner\'s specialty (e.g., cardiology).", optional: true },
+        identifier: { type: 'string', description: "An identifier for the practitioner (e.g., NPI value).", optional: true },
+      },
+      required: [], // Function logic will handle if no criteria are provided
+    },
+  },
+  // Organization Tool Schemas
+  {
+    name: 'createOrganization',
+    description: 'Creates a new organization (e.g., hospital, clinic). Requires organization name.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        name: { type: 'string', description: "The official name of the organization." },
+        alias: { type: 'array', items: { type: 'string' }, description: "A list of aliases for the organization. Optional." },
+        // Add other relevant fields from CreateOrganizationArgs as needed for LLM
+        // Example: contact details if they are simple enough for LLM to provide
+      },
+      required: ['name'],
+    },
+  },
+  {
+    name: 'getOrganizationById',
+    description: 'Retrieves an organization by its unique ID.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        organizationId: { type: 'string', description: 'The unique ID of the organization to retrieve.' },
+      },
+      required: ['organizationId'],
+    },
+  },
+  {
+    name: 'updateOrganization',
+    description: "Updates an existing organization. Requires the organization ID and the fields to update.",
+    input_schema: {
+      type: 'object',
+      properties: {
+        organizationId: { type: 'string', description: "The unique ID of the organization to update." },
+        name: { type: 'string', description: "The new official name of the organization. Optional." },
+        alias: { type: 'array', items: { type: 'string' }, description: "An updated list of aliases. Optional." },
+        // Add other updatable fields from UpdateOrganizationArgs as simplified properties for LLM
+        // Example: contact, address - keeping them simple for LLM
+      },
+      required: ['organizationId'], // At least one update field implied
+    },
+  },
+  {
+    name: 'searchOrganizations',
+    description: "Searches for organizations based on criteria like name or address. Provide at least one criterion.",
+    input_schema: {
+      type: 'object',
+      properties: {
+        name: { type: 'string', description: "The name of the organization to search for. Optional." },
+        address: { type: 'string', description: "Part of the organization\'s address to search for. Optional." },
+      },
+      required: [], // Function logic ensures at least one is present
+    },
   },
   // Patient Tools Schemas
   {
