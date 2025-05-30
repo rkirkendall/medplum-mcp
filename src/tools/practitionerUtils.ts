@@ -1,5 +1,5 @@
 import { medplum, ensureAuthenticated } from '../config/medplumClient';
-import { Practitioner, OperationOutcome } from '@medplum/fhirtypes';
+import { Practitioner, OperationOutcome, HumanName, Identifier } from '@medplum/fhirtypes';
 import { normalizeErrorString } from '@medplum/core';
 
 // Interface for searchPractitionersByName (existing function)
@@ -18,11 +18,7 @@ export async function searchPractitionersByName(
   params: PractitionerNameSearchParams
 ): Promise<Practitioner[]> {
   try {
-    // await ensureAuthenticated(); // Assuming ensureAuthenticated is called by a higher-level handler or test setup
-    // if (!medplum.getActiveLogin()) {
-    //   console.error('Authentication failed. Cannot search practitioners.');
-    //   return [];
-    // }
+    await ensureAuthenticated();
 
     const searchCriteria: Record<string, string> = {};
     if (params.givenName) {
@@ -80,6 +76,7 @@ export async function createPractitioner(args: CreatePractitionerArgs): Promise<
       telecom: args.telecom,
       address: args.address,
     };
+    await ensureAuthenticated();
     const createdPractitioner = await medplum.createResource(practitionerResource);
     console.log('Practitioner created successfully:', createdPractitioner.id);
     return createdPractitioner;
@@ -96,6 +93,7 @@ export async function createPractitioner(args: CreatePractitionerArgs): Promise<
  */
 export async function getPractitionerById(practitionerId: string): Promise<Practitioner | undefined> {
   try {
+    await ensureAuthenticated();
     const practitioner = await medplum.readResource('Practitioner', practitionerId);
     console.log('Practitioner retrieved successfully:', practitioner.id);
     return practitioner;
@@ -129,6 +127,7 @@ export async function updatePractitioner(
   updates: UpdatePractitionerArgs | Omit<Partial<Practitioner>, 'resourceType' | 'id'>
 ): Promise<Practitioner> {
   try {
+    await ensureAuthenticated();
     const existingPractitioner = await getPractitionerById(practitionerId);
     if (!existingPractitioner) {
       throw new Error(`Practitioner with ID ${practitionerId} not found.`);
@@ -170,6 +169,7 @@ export interface PractitionerSearchCriteria {
  */
 export async function searchPractitioners(criteria: PractitionerSearchCriteria): Promise<Practitioner[]> {
   try {
+    await ensureAuthenticated();
     const searchParams: Record<string, string> = {};
     if (criteria.name) searchParams.name = criteria.name;
     if (criteria.given) searchParams.given = criteria.given;

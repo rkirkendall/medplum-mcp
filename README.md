@@ -248,7 +248,7 @@ For each resource, we need tools for `create`, `readById`, `update`, and `search
         - Integrated into `availableTools` and tested in `src/llm-test-harness.ts`.
         - Jest integration tests created and passing (`tests/integration/practitioner.integration.test.ts`).
 
-- [ ] **Tool: `manageOrganization`**
+- [x] **Tool: `manageOrganization`**
     - Description: Handles Organization resources (e.g., hospitals, clinics).
     - Sub-actions:
         - [x] `createOrganization(args: CreateOrganizationArgs)`
@@ -260,14 +260,14 @@ For each resource, we need tools for `create`, `readById`, `update`, and `search
         - To be integrated into `availableTools` in `src/llm-test-harness.ts`.
         - Jest integration tests created and passing (`tests/integration/organization.integration.test.ts`).
 
-- [ ] **Tool: `manageEncounter`**
+- [x] **Tool: `manageEncounter`**
     - Description: Handles Encounter resources (e.g., doctor visits, hospital stays).
     - Sub-actions:
-        - `createEncounter(details: Encounter)`: Links to Patient, Practitioner(s), Organization.
-        - `getEncounterById(id: string)`
-        - `updateEncounter(id: string, updates: Partial<Encounter>)`
-        - `searchEncounters(criteria: { patientId?: string, date?: string, practitionerId?: string })`
-    - Notes: Encounters are central to tracking patient interactions. Ensure `status`, `class`, `type`, `subject` (Patient reference), `participant` (Practitioner reference), `serviceProvider` (Organization reference) are correctly populated.
+        - [x] `createEncounter(details: CreateEncounterArgs)`: Links to Patient, Practitioner(s), Organization.
+        - [x] `getEncounterById(id: string)`
+        - [x] `updateEncounter(id: string, updates: UpdateEncounterArgs)`
+        - [x] `searchEncounters(criteria: EncounterSearchArgs)`
+    - Notes: Encounters are central to tracking patient interactions. `status`, `class`, `type`, `subject`, `participant`, `serviceProvider` are key. Implemented with corresponding utils, schemas, test harness updates, and integration tests (`tests/integration/encounter.integration.test.ts`).
 
 - [ ] **Tool: `manageObservation`**
     - Description: Handles Observation resources (e.g., lab results, vital signs, X-ray findings).
@@ -333,7 +333,7 @@ For each resource, we need tools for `create`, `readById`, `update`, and `search
 
 - [x] **LLM Request Handling in MCP (via Test Harness)**
     - Notes: `src/llm-test-harness.ts` serves as the current entry point. It processes natural language queries, invokes the LLM with tool schemas, and executes the chosen tool by calling the corresponding TypeScript function.
-    - It parses the LLM's tool call, validates (implicitly by checking `availableTools`), calls the MCP server tool, and logs the result.
+    - It parses the LLM's tool call, validates (implicitly by checking tool name in `availableTools` map), calls the MCP server tool, and logs the result.
 
 - [ ] **Natural Language to Tool Parameter Mapping Strategy**
     - Notes: This is largely an LLM task (using the tool schemas), but the MCP tool design should facilitate this.
@@ -380,7 +380,7 @@ For each resource, we need tools for `create`, `readById`, `update`, and `search
         7. Log future potential actions (MedicationRequest for steroids, Referral to rheumatologist - potentially as `ServiceRequest` resources or notes within the `Encounter` or `EpisodeOfCare`).
 
 - [x] **Testing Strategy**
-    - [] Unit tests for each MCP server tool (using Jest/ts-jest, with Medplum SDK calls mocked).
+    - [ ] Unit tests for each MCP server tool (using Jest/ts-jest, with Medplum SDK calls mocked).
     - [x] Integration tests: Connect to the local Dockerized Medplum. Created `practitioner.integration.test.ts` and `patient.integration.test.ts` which test create, read, update, search against a live Medplum instance.
     - [x] E2E testing (manual for now): Converse with the LLM (via `llm-test-harness.ts`) and verify data in Medplum (implicitly done through observing successful tool calls and results).
 

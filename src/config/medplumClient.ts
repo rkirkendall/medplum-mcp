@@ -8,8 +8,7 @@ console.log('[Medplum MCP] Initializing MedplumClient with baseUrl:', effectiveB
 export const medplum = new MedplumClient({
   baseUrl: effectiveBaseUrl, // Default Medplum Docker API port
   clientId: process.env.MEDPLUM_CLIENT_ID, // To be configured
-  fetch: fetch, // Explicitly provide node-fetch
-  // fetch: fetch, // Uncomment if in Node.js older than v18 or for specific fetch polyfills
+  fetch: fetch as any, // Medplum SDK needs fetch
 });
 
 /**
@@ -34,13 +33,6 @@ export async function ensureAuthenticated(): Promise<void> {
         'Please create a ClientApplication in your Medplum instance (e.g., at http://localhost:3000/admin/project) ' +
         'and set these environment variables.'
       );
-      // For a quick start with a local Medplum Docker instance (using default credentials):
-      // 1. Go to http://localhost:3000 (Medplum frontend)
-      // 2. Log in as admin@medplum.com / medplum_admin
-      // 3. Navigate to Project Admin -> Clients -> Create Client
-      // 4. Give it a name, ensure 'Client Credentials' grant type is enabled.
-      // 5. Copy the generated Client ID and Client Secret.
-      // 6. Set them as MEDPLUM_CLIENT_ID and MEDPLUM_CLIENT_SECRET in your .env file or environment.
       throw new Error('Medplum client credentials not configured.');
     }
 
@@ -49,8 +41,6 @@ export async function ensureAuthenticated(): Promise<void> {
       console.log('Medplum client authenticated successfully using client credentials.');
     } catch (err) {
       console.error('Error authenticating Medplum client with client_credentials:', err);
-      // Additional fallback for super admin credentials if client app setup is problematic during dev
-      // This is highly insecure and should NEVER be used outside of very controlled local dev.
       const adminEmail = process.env.MEDPLUM_ADMIN_EMAIL || 'ricky+1test1@gmail.com';
       const adminPassword = process.env.MEDPLUM_ADMIN_PASSWORD || '5gyXgkRW579BBrv';
       console.log(`Attempting login with super admin: ${adminEmail} - THIS IS FOR DEV ONLY`);

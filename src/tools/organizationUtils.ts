@@ -1,6 +1,6 @@
 import { MedplumClient, normalizeErrorString } from '@medplum/core';
-import { Organization, BundleEntry, Bundle } from '@medplum/fhirtypes';
-import { medplum } from '../config/medplumClient';
+import { Organization, BundleEntry, Bundle, OperationOutcome } from '@medplum/fhirtypes';
+import { medplum, ensureAuthenticated } from '../config/medplumClient';
 
 export interface CreateOrganizationArgs {
   name: string;
@@ -23,6 +23,7 @@ export interface UpdateOrganizationArgs extends Partial<CreateOrganizationArgs> 
  */
 export async function createOrganization(args: CreateOrganizationArgs): Promise<Organization> {
   try {
+    await ensureAuthenticated();
     const organization: Organization = {
       resourceType: 'Organization',
       name: args.name,
@@ -46,6 +47,7 @@ export async function createOrganization(args: CreateOrganizationArgs): Promise<
  */
 export async function getOrganizationById(organizationId: string): Promise<Organization | undefined> {
   try {
+    await ensureAuthenticated();
     const organization = await medplum.readResource('Organization', organizationId);
     console.log('Organization retrieved successfully:', organization.id);
     return organization;
@@ -70,6 +72,7 @@ export async function updateOrganization(
   updates: UpdateOrganizationArgs
 ): Promise<Organization> {
   try {
+    await ensureAuthenticated();
     const existingOrganization = await getOrganizationById(organizationId);
     if (!existingOrganization) {
       throw new Error(`Organization with ID ${organizationId} not found.`);
@@ -105,6 +108,7 @@ export interface OrganizationSearchCriteria {
  */
 export async function searchOrganizations(criteria: OrganizationSearchCriteria): Promise<Organization[]> {
   try {
+    await ensureAuthenticated();
     const searchParams: Record<string, string> = {};
     if (criteria.name) {
       searchParams.name = criteria.name;

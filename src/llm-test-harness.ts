@@ -20,6 +20,7 @@ import {
   searchPatients,
   CreatePatientArgs, // This specific interface might not be directly used by LLM but good for our own type safety if we had other internal calls.
 } from './tools/patientUtils';
+import { createEncounter, getEncounterById, updateEncounter, searchEncounters } from './tools/encounterUtils'; // Added searchEncounters import
 import { Patient } from '@medplum/fhirtypes'; // Practitioner is imported in practitionerSearch.ts
 import dotenv from 'dotenv';
 
@@ -45,6 +46,10 @@ const availableTools: Record<string, (...args: any[]) => Promise<any>> = {
   getOrganizationById: getOrganizationById,
   updateOrganization: updateOrganization,
   searchOrganizations: searchOrganizations,
+  createEncounter: createEncounter,
+  getEncounterById: getEncounterById, // Added getEncounterById to availableTools
+  updateEncounter: updateEncounter, // Added updateEncounter to availableTools
+  searchEncounters: searchEncounters, // Added searchEncounters to availableTools
   // Future tools will be added here
 };
 
@@ -101,12 +106,12 @@ async function processNaturalLanguageQuery(query: string): Promise<any> {
       if (toolToExecute) {
         let toolResult;
         // Adjust how arguments are passed based on the tool being called
-        if (toolName === 'getPatientById' || toolName === 'getPractitionerById' || toolName === 'getOrganizationById') {
-          toolResult = await toolToExecute(toolArguments.patientId || toolArguments.practitionerId || toolArguments.organizationId);
-        } else if (toolName === 'updatePatient' || toolName === 'updatePractitioner' || toolName === 'updateOrganization') {
-          const { patientId, practitionerId, organizationId, ...updatesObject } = toolArguments;
+        if (toolName === 'getPatientById' || toolName === 'getPractitionerById' || toolName === 'getOrganizationById' || toolName === 'getEncounterById') {
+          toolResult = await toolToExecute(toolArguments.patientId || toolArguments.practitionerId || toolArguments.organizationId || toolArguments.encounterId);
+        } else if (toolName === 'updatePatient' || toolName === 'updatePractitioner' || toolName === 'updateOrganization' || toolName === 'updateEncounter') {
+          const { patientId, practitionerId, organizationId, encounterId, ...updatesObject } = toolArguments;
           console.log(`Constructed updates for ${toolName}:`, updatesObject);
-          toolResult = await toolToExecute(patientId || practitionerId || organizationId, updatesObject);
+          toolResult = await toolToExecute(patientId || practitionerId || organizationId || encounterId, updatesObject);
         } else if (
           toolName === 'createPatient' ||
           toolName === 'searchPatients' ||
@@ -114,7 +119,9 @@ async function processNaturalLanguageQuery(query: string): Promise<any> {
           toolName === 'createPractitioner' ||
           toolName === 'searchPractitioners' ||
           toolName === 'createOrganization' ||
-          toolName === 'searchOrganizations'
+          toolName === 'searchOrganizations' ||
+          toolName === 'createEncounter' ||
+          toolName === 'searchEncounters' // Added searchEncounters here
         ) {
           // These tools expect the whole argument object as their first parameter
           toolResult = await toolToExecute(toolArguments);
@@ -315,6 +322,98 @@ async function main() {
   console.log('\n--- Test Case 18 (Search Organizations) Result ---');
   console.log(JSON.stringify(result18, null, 2));
   console.log('--------------------------------------------------\n');
+
+  // --- Test Case 16: Search for organization (general)
+  const query16 = "Find organizations with name like 'General Hospital'";
+  const result16 = await processNaturalLanguageQuery(query16);
+  console.log('\n--- Test Case 16 (Search Organization General) Result ---');
+  console.log(JSON.stringify(result16, null, 2));
+  console.log('---------------------------------------------------------\n');
+
+  // --- New Test Cases for Encounter Tools ---
+  console.log('\n\n--- STARTING ENCOUNTER TOOL TESTS ---\n');
+
+  // Test Case 17: Create a new encounter
+  // Ensure you have a patient and practitioner ID to use here, or create them first.
+  // For simplicity, assuming a patient ID 'test-patient-id' and practitioner ID 'test-practitioner-id' exist.
+  // In a real scenario, you'd fetch or create these first.
+  const encounterPatientId = createdPatientIdForFollowUp || 'temp-patient-for-encounter'; // Use previously created patient or a placeholder
+  const encounterPractitionerId = createdPractitionerIdForFollowUp; // Use previously created practitioner or a placeholder
+
+  const query17 = `Create an encounter for patient ${encounterPatientId}. It's an ambulatory visit (class AMB), status is finished. Practitioner ${encounterPractitionerId} was involved. The reason was a checkup, type code 'CHECKUP', starting today.`;
+  const result17 = await processNaturalLanguageQuery(query17);
+  console.log('\n--- Test Case 17 (Create Encounter) Result ---');
+  console.log(JSON.stringify(result17, null, 2));
+  console.log('------------------------------------------\n');
+  
+  let createdEncounterIdForFollowUp: string | undefined;
+  if (result17.processed && result17.tool_called === 'createEncounter' && result17.result?.id) {
+    createdEncounterIdForFollowUp = result17.result.id;
+    console.log(`Encounter created with ID: ${createdEncounterIdForFollowUp} - will use for get/update tests.`);
+  }
+
+  // Test Case 18: Get Encounter by ID
+  if (createdEncounterIdForFollowUp) {
+    const query18 = `Get me the details for encounter with ID ${createdEncounterIdForFollowUp}.`;
+    const result18 = await processNaturalLanguageQuery(query18);
+    console.log('\n--- Test Case 18 (Get Encounter By ID) Result ---');
+    console.log(JSON.stringify(result18, null, 2));
+    console.log('----------------------------------------------\n');
+  } else {
+    console.log('\n--- Skipping Test Case 18 (Get Encounter By ID) because encounter creation failed or ID was not retrieved ---\n');
+  }
+
+  // Test Case 19: Update Encounter
+  if (createdEncounterIdForFollowUp) {
+    const query19 = `Update encounter ${createdEncounterIdForFollowUp}: change status to 'in-progress' and set period start to today.`;
+    const result19 = await processNaturalLanguageQuery(query19);
+    console.log('\n--- Test Case 19 (Update Encounter) Result ---');
+    console.log(JSON.stringify(result19, null, 2));
+    console.log('--------------------------------------------\n');
+
+    // Verification step: Get the encounter again to check if updates were applied
+    const query19Verify = `Get encounter ${createdEncounterIdForFollowUp}`;
+    const result19Verify = await processNaturalLanguageQuery(query19Verify);
+    console.log('\n--- Test Case 19 (Update Encounter - Verification Get) Result ---');
+    console.log(JSON.stringify(result19Verify, null, 2));
+    console.log('-------------------------------------------------------------\n');
+
+  } else {
+    console.log('\n--- Skipping Test Case 19 (Update Encounter) because no encounter ID was available ---\n');
+  }
+
+  // Test Case 20: Search Encounters
+  // This test assumes some encounters have been created by previous tests, 
+  // particularly for the patient created in Test Case 5 (Alice Wonderland) 
+  // and the encounter created in Test Case 17.
+  if (createdPatientIdForFollowUp) {
+    const query20_1 = `Find all encounters for patient ${createdPatientIdForFollowUp}.`;
+    const result20_1 = await processNaturalLanguageQuery(query20_1);
+    console.log('\n--- Test Case 20.1 (Search Encounters by Patient ID) Result ---');
+    console.log(JSON.stringify(result20_1, null, 2));
+    console.log('------------------------------------------------------------\n');
+
+    const query20_2 = `Search for encounters for patient ${createdPatientIdForFollowUp} with status finished.`;
+    const result20_2 = await processNaturalLanguageQuery(query20_2);
+    console.log('\n--- Test Case 20.2 (Search Encounters by Patient and Status) Result ---');
+    console.log(JSON.stringify(result20_2, null, 2));
+    console.log('------------------------------------------------------------------\n');
+  }
+
+  const query20_3 = "Search for any encounters with status planned.";
+  const result20_3 = await processNaturalLanguageQuery(query20_3);
+  console.log('\n--- Test Case 20.3 (Search Encounters by Status) Result ---');
+  console.log(JSON.stringify(result20_3, null, 2));
+  console.log('----------------------------------------------------------\n');
+
+  // Test Case 21: Search encounters by date (example)
+  // This query might not yield results unless encounters align with this date.
+  const specificDate = new Date().toISOString().split('T')[0]; // Today's date in YYYY-MM-DD
+  const query21 = `Find encounters that occurred on ${specificDate}.`;
+  const result21 = await processNaturalLanguageQuery(query21);
+  console.log('\n--- Test Case 21 (Search Encounters by Date) Result ---');
+  console.log(JSON.stringify(result21, null, 2));
+  console.log('------------------------------------------------------\n');
 
 }
 

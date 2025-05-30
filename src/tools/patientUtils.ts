@@ -1,5 +1,6 @@
+import { MedplumClient } from '@medplum/core';
+import { Patient, HumanName, BundleEntry, Bundle, OperationOutcome } from '@medplum/fhirtypes';
 import { medplum, ensureAuthenticated } from '../config/medplumClient';
-import { Patient } from '@medplum/fhirtypes';
 
 /**
  * Interface for the data needed to create a new patient.
@@ -82,6 +83,10 @@ export async function getPatientById(patientId: string): Promise<Patient | null>
       return null;
     }
     console.log(`Attempting to retrieve Patient with ID: ${patientId}`);
+    if (!patientId) {
+      console.error('Patient ID is undefined. Cannot retrieve patient.');
+      return null;
+    }
     // @ts-ignore
     const patient = await medplum.readResource<Patient>('Patient', patientId) as Patient;
     console.log(`Successfully retrieved Patient with ID: ${patient.id}`);
