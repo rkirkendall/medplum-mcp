@@ -1,0 +1,43 @@
+# Node.js
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Environment variables
+.env
+.env.*
+!.env.example
+
+# Build output (common examples, adjust if your outDir is different)
+dist/
+build/
+out/
+*.tsbuildinfo
+
+# Test output & coverage
+coverage/
+junit.xml
+
+# IDE specific
+.idea/
+.vscode/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# User Specific Ignores
+docker-compose.yml
+docker-compose.yaml
+*.m
+medplum/
+
+# Log files
+*.log
+logs/ 
