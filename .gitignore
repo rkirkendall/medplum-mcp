@@ -40,4 +40,8 @@ medplum/
 
 # Log files
 *.log
-logs/ 
+logs/
+
+# Local flies
+results.json
+commonmistakes.markdown 

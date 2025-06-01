@@ -1,5 +1,5 @@
 import { medplum, ensureAuthenticated } from '../config/medplumClient';
-import { Practitioner, OperationOutcome, HumanName, Identifier } from '@medplum/fhirtypes';
+import { Practitioner, OperationOutcome, HumanName, Identifier, ContactPoint } from '@medplum/fhirtypes';
 import { normalizeErrorString } from '@medplum/core';
 
 // Interface for searchPractitionersByName (existing function)
@@ -17,44 +17,42 @@ interface PractitionerNameSearchParams {
 export async function searchPractitionersByName(
   params: PractitionerNameSearchParams
 ): Promise<Practitioner[]> {
-  try {
-    await ensureAuthenticated();
+  await ensureAuthenticated();
 
-    const searchCriteria: Record<string, string> = {};
-    if (params.givenName) {
-      searchCriteria.given = params.givenName;
-    }
-    if (params.familyName) {
-      searchCriteria.family = params.familyName;
-    }
-    if (params.name) {
-      searchCriteria.name = params.name;
-    }
-
-    if (Object.keys(searchCriteria).length === 0) {
-      console.warn('No search criteria provided for practitioner name search.');
-      return [];
-    }
-
-    const practitioners = await medplum.searchResources('Practitioner', searchCriteria);
-    console.log(`Found ${practitioners.length} practitioners by name.`);
-    return practitioners;
-  } catch (error) {
-    console.error('Error searching for practitioners by name:', normalizeErrorString(error));
-    // Return empty array or throw, depending on desired error handling for the application
-    throw new Error(`Failed to search practitioners by name: ${normalizeErrorString(error)}`);
+  const searchCriteria: string[] = [];
+  if (params.givenName) {
+    searchCriteria.push(`given:contains=${params.givenName}`);
   }
+  if (params.familyName) {
+    searchCriteria.push(`family:contains=${params.familyName}`);
+  }
+  if (params.name) {
+    searchCriteria.push(`name:contains=${params.name}`);
+  }
+
+  if (searchCriteria.length === 0) {
+    return [];
+  }
+  const queryString = searchCriteria.join('&');
+  return medplum.searchResources('Practitioner', queryString);
 }
 
 // New functions to be added based on IMPLEMENTATION_PLAN.md
 
 export interface CreatePractitionerArgs {
-  givenName: string;
-  familyName: string;
-  identifier?: Practitioner['identifier'];
-  telecom?: Practitioner['telecom'];
-  address?: Practitioner['address'];
-  // Add other relevant fields like gender, birthDate, qualification, etc.
+  family?: string;
+  given?: string[]; 
+  gender?: 'male' | 'female' | 'other' | 'unknown';
+  birthDate?: string;
+  // phone?: string; // Deprecate in favor of telecom array
+  // email?: string; // Deprecate in favor of telecom array
+  telecom?: ContactPoint[]; // Added for FHIR alignment and test compatibility
+  qualification?: string;
+  identifier?: Identifier[];
+  active?: boolean; // Allow setting active status on create
+  // Backward compatibility fields
+  givenName?: string;
+  familyName?: string;
 }
 
 /**
@@ -63,27 +61,68 @@ export interface CreatePractitionerArgs {
  * @returns The created Practitioner resource.
  */
 export async function createPractitioner(args: CreatePractitionerArgs): Promise<Practitioner> {
-  try {
-    const practitionerResource: Practitioner = {
-      resourceType: 'Practitioner',
-      name: [
-        {
-          given: [args.givenName],
-          family: args.familyName,
-        },
-      ],
-      identifier: args.identifier,
-      telecom: args.telecom,
-      address: args.address,
-    };
-    await ensureAuthenticated();
-    const createdPractitioner = await medplum.createResource(practitionerResource);
-    console.log('Practitioner created successfully:', createdPractitioner.id);
-    return createdPractitioner;
-  } catch (error) {
-    console.error('Error creating practitioner:', normalizeErrorString(error));
-    throw new Error(`Failed to create practitioner: ${normalizeErrorString(error)}`);
+  await ensureAuthenticated();
+
+  // Handle backward compatibility
+  let family = args.family;
+  let given = args.given;
+  
+  if (args.familyName && !family) {
+    family = args.familyName;
   }
+  if (args.givenName && (!given || given.length === 0)) {
+    given = [args.givenName];
+  }
+
+  if (!family) {
+    throw new Error('Family name is required to create a practitioner.');
+  }
+  if (!given || given.length === 0) {
+    throw new Error('At least one given name is required to create a practitioner.');
+  }
+
+  const practitionerResource: Practitioner = {
+    resourceType: 'Practitioner',
+    name: [{
+      family: family,
+      given: given,
+    }],
+    active: true,
+  };
+
+  // Handle identifier (now an array)
+  if (args.identifier && args.identifier.length > 0) {
+    practitionerResource.identifier = args.identifier;
+  }
+
+  // Handle telecom directly if provided
+  if (args.telecom && args.telecom.length > 0) {
+    practitionerResource.telecom = args.telecom;
+  }
+
+  // Handle other fields
+  if (args.gender) {
+    practitionerResource.gender = args.gender;
+  }
+  if (args.birthDate) {
+    practitionerResource.birthDate = args.birthDate;
+  }
+  if (args.qualification) {
+    practitionerResource.qualification = [{ code: { text: args.qualification } }];
+  }
+
+  // Allow setting active status on create
+  if (typeof args.active === 'boolean') {
+    practitionerResource.active = args.active;
+  } else {
+    practitionerResource.active = true; // Default to true if not specified
+  }
+
+  return medplum.createResource<Practitioner>(practitionerResource);
+}
+
+export interface GetPractitionerByIdArgs {
+  practitionerId: string;
 }
 
 /**
@@ -91,29 +130,28 @@ export async function createPractitioner(args: CreatePractitionerArgs): Promise<
  * @param practitionerId - The ID of the practitioner to retrieve.
  * @returns The Practitioner resource, or undefined if not found.
  */
-export async function getPractitionerById(practitionerId: string): Promise<Practitioner | undefined> {
+export async function getPractitionerById(args: GetPractitionerByIdArgs | string): Promise<Practitioner | null> {
+  await ensureAuthenticated();
+  
+  // Handle both string and object parameter formats
+  const practitionerId = typeof args === 'string' ? args : args.practitionerId;
+  
+  if (!practitionerId) {
+    throw new Error('Practitioner ID is required to fetch a practitioner.');
+  }
   try {
-    await ensureAuthenticated();
-    const practitioner = await medplum.readResource('Practitioner', practitionerId);
-    console.log('Practitioner retrieved successfully:', practitioner.id);
-    return practitioner;
-  } catch (error) {
-    const errorString = normalizeErrorString(error);
-    console.error(`Error retrieving practitioner ${practitionerId}:`, errorString);
-    if (errorString.includes('Not found') || (error as OperationOutcome)?.issue?.[0]?.code === 'not-found') {
-        return undefined;
+    // No generic type needed, Medplum infers it from 'Practitioner' string
+    return await medplum.readResource('Practitioner', practitionerId);
+  } catch (error: any) {
+    if (error.outcome?.issue?.[0]?.code === 'not-found') {
+      return null;
     }
-    throw new Error(`Failed to retrieve practitioner ${practitionerId}: ${errorString}`);
+    throw error;
   }
 }
 
-export interface UpdatePractitionerArgs extends Omit<Partial<CreatePractitionerArgs>, 'givenName' | 'familyName'> {
-  // Name updates would typically be handled by providing the full name structure if supported by the API for update
-  // For simplicity, we allow updates to fields other than name components here.
-  // If name update is needed, it might require specific handling for the name array.
-  name?: Practitioner['name']; // Allow full name array update
-  active?: boolean;
-  // Add other updatable fields as needed
+export interface UpdatePractitionerArgs extends Omit<Partial<Practitioner>, 'resourceType' | 'id'> {
+  // Add simplified fields if LLM struggles with full FHIR structure
 }
 
 /**
@@ -122,44 +160,43 @@ export interface UpdatePractitionerArgs extends Omit<Partial<CreatePractitionerA
  * @param updates - The partial data to update the practitioner with.
  * @returns The updated Practitioner resource.
  */
-export async function updatePractitioner(
-  practitionerId: string,
-  updates: UpdatePractitionerArgs | Omit<Partial<Practitioner>, 'resourceType' | 'id'>
-): Promise<Practitioner> {
-  try {
-    await ensureAuthenticated();
-    const existingPractitioner = await getPractitionerById(practitionerId);
-    if (!existingPractitioner) {
-      throw new Error(`Practitioner with ID ${practitionerId} not found.`);
-    }
+export async function updatePractitioner(practitionerId: string, updates: UpdatePractitionerArgs): Promise<Practitioner> {
+  await ensureAuthenticated();
 
-    // Merge updates with existing resource
-    // Note: For complex fields like 'name', ensure the update structure is correct.
-    // If `updates.name` is provided, it will overwrite the existing name array.
-    // Otherwise, other fields are merged.
-    const practitionerToUpdate: Practitioner = {
-      ...existingPractitioner,
-      ...(updates as any), // Using 'as any' for broader compatibility with Partial<Practitioner>
-      id: practitionerId, // Ensure ID is maintained
-      resourceType: 'Practitioner', // Ensure resourceType is maintained
-    };
-
-    const updatedPractitioner = await medplum.updateResource(practitionerToUpdate);
-    console.log('Practitioner updated successfully:', updatedPractitioner.id);
-    return updatedPractitioner;
-  } catch (error) {
-    console.error(`Error updating practitioner ${practitionerId}:`, normalizeErrorString(error));
-    throw new Error(`Failed to update practitioner ${practitionerId}: ${normalizeErrorString(error)}`);
+  if (!practitionerId) {
+    throw new Error('Practitioner ID is required to update a practitioner.');
   }
+  if (!updates || Object.keys(updates).length === 0) {
+    throw new Error('Updates object cannot be empty for updating a practitioner.');
+  }
+
+  const existingPractitioner = await medplum.readResource('Practitioner', practitionerId);
+  if (!existingPractitioner) {
+    throw new Error(`Practitioner with ID ${practitionerId} not found.`);
+  }
+  
+  const { resourceType, id, ...safeUpdates } = updates as any; 
+
+  const practitionerToUpdate: Practitioner = {
+    ...existingPractitioner,
+    ...safeUpdates,
+    resourceType: 'Practitioner', 
+    id: practitionerId, 
+  };
+  
+  return medplum.updateResource(practitionerToUpdate);
 }
 
 export interface PractitionerSearchCriteria {
-  name?: string; // General name search
-  given?: string;
-  family?: string;
-  specialty?: string;
-  identifier?: string;
-  // Add other FHIR Practitioner search parameters: https://www.hl7.org/fhir/practitioner.html#search
+  identifier?: string; // Search by identifier (e.g., NPI)
+  name?: string;       // General name search
+  givenName?: string;
+  familyName?: string;
+  addressCity?: string;
+  addressState?: string;
+  telecom?: string;
+  _lastUpdated?: string;
+  // Add other relevant criteria as needed
 }
 
 /**
@@ -168,26 +205,22 @@ export interface PractitionerSearchCriteria {
  * @returns An array of Practitioner resources matching the criteria.
  */
 export async function searchPractitioners(criteria: PractitionerSearchCriteria): Promise<Practitioner[]> {
-  try {
-    await ensureAuthenticated();
-    const searchParams: Record<string, string> = {};
-    if (criteria.name) searchParams.name = criteria.name;
-    if (criteria.given) searchParams.given = criteria.given;
-    if (criteria.family) searchParams.family = criteria.family;
-    if (criteria.specialty) searchParams.specialty = criteria.specialty; // Make sure 'specialty' is a valid search param
-    if (criteria.identifier) searchParams.identifier = criteria.identifier;
+  await ensureAuthenticated();
+  const searchParams: string[] = [];
 
-    if (Object.keys(searchParams).length === 0) {
-      console.warn('No criteria provided for practitioner search. Returning all practitioners (potentially many).');
-      // Potentially dangerous to return all; consider throwing error or returning empty array by default.
-      // For now, let it proceed if medplum.searchResources handles it (e.g. returns first page)
-    }
-
-    const practitioners = await medplum.searchResources('Practitioner', searchParams);
-    console.log(`Found ${practitioners.length} practitioners based on general criteria.`);
-    return practitioners;
-  } catch (error) {
-    console.error('Error searching practitioners:', normalizeErrorString(error));
-    throw new Error(`Failed to search practitioners: ${normalizeErrorString(error)}`);
+  if (criteria.identifier) searchParams.push(`identifier=${criteria.identifier}`);
+  if (criteria.name) searchParams.push(`name:contains=${criteria.name}`);
+  if (criteria.givenName) searchParams.push(`given:contains=${criteria.givenName}`);
+  if (criteria.familyName) searchParams.push(`family:contains=${criteria.familyName}`);
+  if (criteria.addressCity) searchParams.push(`address-city:contains=${criteria.addressCity}`);
+  if (criteria.addressState) searchParams.push(`address-state:contains=${criteria.addressState}`);
+  if (criteria.telecom) searchParams.push(`telecom=${criteria.telecom}`);
+  if (criteria._lastUpdated) searchParams.push(`_lastUpdated=${criteria._lastUpdated}`);
+  
+  if (searchParams.length === 0) {
+    return [];
   }
+
+  const queryString = searchParams.join('&');
+  return medplum.searchResources('Practitioner', queryString);
 } 

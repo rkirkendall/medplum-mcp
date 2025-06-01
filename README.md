@@ -30,6 +30,11 @@ The MCP server currently supports the following FHIR resource management tools:
     *   `getOrganizationById`
     *   `updateOrganization`
     *   `searchOrganizations`
+*   **Observation Tools (`src/tools/observationUtils.ts`)**:
+    *   `createObservation`
+    *   `getObservationById`
+    *   `updateObservation`
+    *   `searchObservations`
 
 Each tool is exposed to the LLM via a defined JSON schema and is callable through a test harness (`src/llm-test-harness.ts`).
 
@@ -269,16 +274,16 @@ For each resource, we need tools for `create`, `readById`, `update`, and `search
         - [x] `searchEncounters(criteria: EncounterSearchArgs)`
     - Notes: Encounters are central to tracking patient interactions. `status`, `class`, `type`, `subject`, `participant`, `serviceProvider` are key. Implemented with corresponding utils, schemas, test harness updates, and integration tests (`tests/integration/encounter.integration.test.ts`).
 
-- [ ] **Tool: `manageObservation`**
+- [x] **Tool: `manageObservation`**
     - Description: Handles Observation resources (e.g., lab results, vital signs, X-ray findings).
     - Sub-actions:
-        - `createObservation(details: Observation)`: Links to Encounter, Patient.
+        - `createObservation(details: CreateObservationArgs)`: Links to Encounter, Patient.
         - `getObservationById(id: string)`
-        - `updateObservation(id: string, updates: Partial<Observation>)`
-        - `searchObservations(criteria: { patientId?: string, code?: string, encounterId?: string, date?: string })`
+        - `updateObservation(id: string, updates: UpdateObservationArgs)`
+        - `searchObservations(criteria: ObservationSearchArgs)`
     - Notes: `code` (LOINC, SNOMED CT), `value[x]`, `subject`, `encounter` are key fields. "Sed test" would map to a specific LOINC code. "X-ray" also.
 
-- [ ] **Tool: `manageMedicationRequest`**
+- [x] **Tool: `manageMedicationRequest`**
     - Description: Handles MedicationRequest resources (prescriptions).
     - Sub-actions:
         - `createMedicationRequest(details: MedicationRequest)`: Links to Patient, Practitioner, Medication.

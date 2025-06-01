@@ -189,7 +189,7 @@ describe('Encounter Tool Integration Tests', () => {
 
       const updates: UpdateEncounterArgs = {
         status: updatedStatus,
-        class: updatedClassCode, // Test providing class as a simple string code
+        classCode: updatedClassCode,
         period: { start: new Date().toISOString() },
       };
 

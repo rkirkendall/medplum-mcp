@@ -1,19 +1,49 @@
 import { MedplumClient, normalizeErrorString } from '@medplum/core';
-import { Organization, BundleEntry, Bundle, OperationOutcome } from '@medplum/fhirtypes';
+import { Organization, BundleEntry, Bundle, OperationOutcome, Identifier } from '@medplum/fhirtypes';
 import { medplum, ensureAuthenticated } from '../config/medplumClient';
 
 export interface CreateOrganizationArgs {
   name: string;
   alias?: string[];
-  contact?: Organization['contact'];
-  // Add other relevant Organization fields as needed by the LLM or use cases
-  // For example: type, address, partOf (reference to parent organization)
+  typeCode?: string;
+  typeSystem?: string;
+  typeDisplay?: string;
+  phone?: string;
+  email?: string;
+  address?: {
+    use?: 'home' | 'work' | 'temp' | 'old' | 'billing';
+    line?: string[];
+    city?: string;
+    state?: string;
+    postalCode?: string;
+    country?: string;
+  };
+  identifierSystem?: string;
+  identifierValue?: string;
+  contact?: any[]; // Added for test compatibility
 }
 
-export interface UpdateOrganizationArgs extends Partial<CreateOrganizationArgs> {
-  // We'll allow partial updates of fields defined in CreateOrganizationArgs
-  // plus other updatable fields.
-  // Ensure 'id' is not part of this, as it's a separate parameter for the update function.
+export interface GetOrganizationByIdArgs {
+  organizationId: string;
+}
+
+export interface UpdateOrganizationArgs extends Omit<Partial<Organization>, 'resourceType' | 'id'> {
+  // if specific simplified fields are needed, they can be added here
+}
+
+export interface OrganizationSearchArgs {
+  name?: string;
+  addressCity?: string;
+  addressState?: string;
+  identifier?: string;
+  type?: string; // search by type code, optionally with system (system|code)
+  _lastUpdated?: string;
+  active?: boolean;
+  address?: string;
+  city?: string;
+  state?: string;
+  postalCode?: string;
+  country?: string;
 }
 
 /**
@@ -22,42 +52,87 @@ export interface UpdateOrganizationArgs extends Partial<CreateOrganizationArgs> 
  * @returns The created Organization resource.
  */
 export async function createOrganization(args: CreateOrganizationArgs): Promise<Organization> {
-  try {
-    await ensureAuthenticated();
-    const organization: Organization = {
-      resourceType: 'Organization',
-      name: args.name,
-      alias: args.alias,
-      contact: args.contact,
-      // Potentially map other args fields here
-    };
-    const createdOrganization = await medplum.createResource(organization);
-    console.log('Organization created successfully:', createdOrganization.id);
-    return createdOrganization;
-  } catch (error) {
-    console.error('Error creating organization:', normalizeErrorString(error));
-    throw new Error(`Failed to create organization: ${normalizeErrorString(error)}`);
+  await ensureAuthenticated();
+
+  if (!args.name) {
+    throw new Error('Organization name is required.');
   }
+
+  const organizationResource: Organization = {
+    resourceType: "Organization",
+    name: args.name,
+    active: true, // Default to active
+  };
+
+  if (args.alias && args.alias.length > 0) {
+    organizationResource.alias = args.alias;
+  }
+
+  if (args.typeCode) {
+    organizationResource.type = [{
+      coding: [{
+        system: args.typeSystem || 'http://terminology.hl7.org/CodeSystem/organization-type',
+        code: args.typeCode,
+        display: args.typeDisplay || args.typeCode,
+      }],
+      text: args.typeDisplay || args.typeCode
+    }];
+  }
+
+  if (args.phone || args.email) {
+    organizationResource.telecom = [];
+    if (args.phone) {
+      organizationResource.telecom.push({ system: 'phone', value: args.phone, use: 'work' });
+    }
+    if (args.email) {
+      organizationResource.telecom.push({ system: 'email', value: args.email, use: 'work' });
+    }
+  }
+
+  if (args.address) {
+    organizationResource.address = [{
+      use: args.address.use || 'work',
+      line: args.address.line,
+      city: args.address.city,
+      state: args.address.state,
+      postalCode: args.address.postalCode,
+      country: args.address.country,
+    }];
+  }
+
+  if (args.identifierValue) {
+    const identifier: Identifier = { value: args.identifierValue };
+    if (args.identifierSystem) {
+      identifier.system = args.identifierSystem;
+    }
+    organizationResource.identifier = [identifier];
+  }
+
+  return medplum.createResource<Organization>(organizationResource);
 }
 
 /**
  * Retrieves an Organization resource by its ID.
- * @param organizationId - The ID of the organization to retrieve.
+ * @param args - The ID of the organization to retrieve.
  * @returns The Organization resource.
  */
-export async function getOrganizationById(organizationId: string): Promise<Organization | undefined> {
+export async function getOrganizationById(args: { organizationId: string } | string): Promise<Organization | null> {
+  await ensureAuthenticated();
+  
+  // Handle both string and object parameter formats
+  const organizationId = typeof args === 'string' ? args : args.organizationId;
+  
+  if (!organizationId) {
+    throw new Error('Organization ID is required to fetch an organization.');
+  }
   try {
-    await ensureAuthenticated();
-    const organization = await medplum.readResource('Organization', organizationId);
-    console.log('Organization retrieved successfully:', organization.id);
-    return organization;
-  } catch (error) {
-    console.error(`Error retrieving organization ${organizationId}:`, normalizeErrorString(error));
-    // Medplum SDK throws error if not found, so we might want to return undefined or handle specific error types
-    if (normalizeErrorString(error).includes('Not found')) {
-        return undefined;
+    // Remove generic type, let Medplum infer it
+    return await medplum.readResource("Organization", organizationId);
+  } catch (error: any) {
+    if (error.outcome?.issue?.[0]?.code === 'not-found') {
+      return null;
     }
-    throw new Error(`Failed to retrieve organization ${organizationId}: ${normalizeErrorString(error)}`);
+    throw error;
   }
 }
 
@@ -67,31 +142,31 @@ export async function getOrganizationById(organizationId: string): Promise<Organ
  * @param updates - The partial data to update the organization with.
  * @returns The updated Organization resource.
  */
-export async function updateOrganization(
-  organizationId: string,
-  updates: UpdateOrganizationArgs
-): Promise<Organization> {
-  try {
-    await ensureAuthenticated();
-    const existingOrganization = await getOrganizationById(organizationId);
-    if (!existingOrganization) {
-      throw new Error(`Organization with ID ${organizationId} not found.`);
-    }
+export async function updateOrganization(organizationId: string, updates: UpdateOrganizationArgs): Promise<Organization> {
+  await ensureAuthenticated();
 
-    const organizationToUpdate: Organization = {
-      ...existingOrganization,
-      ...updates,
-      id: organizationId, // Ensure ID is maintained
-      resourceType: 'Organization', // Ensure resourceType is maintained
-    };
-
-    const updatedOrganization = await medplum.updateResource(organizationToUpdate);
-    console.log('Organization updated successfully:', updatedOrganization.id);
-    return updatedOrganization;
-  } catch (error) {
-    console.error(`Error updating organization ${organizationId}:`, normalizeErrorString(error));
-    throw new Error(`Failed to update organization ${organizationId}: ${normalizeErrorString(error)}`);
+  if (!organizationId) {
+    throw new Error('Organization ID is required to update an organization.');
   }
+  if (!updates || Object.keys(updates).length === 0) {
+    throw new Error('Updates object cannot be empty for updating an organization.');
+  }
+
+  const existingOrganization = await medplum.readResource("Organization", organizationId);
+  if (!existingOrganization) {
+    throw new Error(`Organization with ID ${organizationId} not found.`);
+  }
+
+  const { resourceType, id, ...safeUpdates } = updates as any;
+
+  const organizationToUpdate: Organization = {
+    ...existingOrganization,
+    ...safeUpdates,
+    resourceType: "Organization",
+    id: organizationId,
+  };
+
+  return medplum.updateResource(organizationToUpdate);
 }
 
 export interface OrganizationSearchCriteria {
@@ -103,33 +178,48 @@ export interface OrganizationSearchCriteria {
 
 /**
  * Searches for Organization resources based on criteria.
- * @param criteria - The search criteria.
+ * @param args - The search criteria.
  * @returns A bundle of Organization resources matching the criteria.
  */
-export async function searchOrganizations(criteria: OrganizationSearchCriteria): Promise<Organization[]> {
-  try {
-    await ensureAuthenticated();
-    const searchParams: Record<string, string> = {};
-    if (criteria.name) {
-      searchParams.name = criteria.name;
-    }
-    if (criteria.address) {
-      searchParams.address = criteria.address;
-    }
+export async function searchOrganizations(searchArgs: OrganizationSearchArgs): Promise<Organization[]> {
+  await ensureAuthenticated();
+  
+  const searchCriteria: string[] = [];
 
-    if (Object.keys(searchParams).length === 0) {
-       throw new Error('Search criteria must be provided for organizations.');
-    }
-
-    // Let TypeScript infer the return type from the 'Organization' string literal argument
-    const organizations: Organization[] = await medplum.searchResources('Organization', searchParams);
-    
-    console.log(`Found ${organizations.length} organizations matching criteria.`);
-    return organizations;
-  } catch (error) {
-    console.error('Error searching organizations:', normalizeErrorString(error));
-    throw new Error(`Failed to search organizations: ${normalizeErrorString(error)}`);
+  if (searchArgs.name) {
+    searchCriteria.push(`name=${encodeURIComponent(searchArgs.name)}`);
   }
+  if (searchArgs.identifier) {
+    searchCriteria.push(`identifier=${encodeURIComponent(searchArgs.identifier)}`);
+  }
+  if (searchArgs.type) {
+    searchCriteria.push(`type=${encodeURIComponent(searchArgs.type)}`);
+  }
+  if (searchArgs.active !== undefined) {
+    searchCriteria.push(`active=${searchArgs.active}`);
+  }
+  if (searchArgs.address) {
+    searchCriteria.push(`address=${encodeURIComponent(searchArgs.address)}`);
+  }
+  if (searchArgs.city) {
+    searchCriteria.push(`address-city=${encodeURIComponent(searchArgs.city)}`);
+  }
+  if (searchArgs.state) {
+    searchCriteria.push(`address-state=${encodeURIComponent(searchArgs.state)}`);
+  }
+  if (searchArgs.postalCode) {
+    searchCriteria.push(`address-postalcode=${encodeURIComponent(searchArgs.postalCode)}`);
+  }
+  if (searchArgs.country) {
+    searchCriteria.push(`address-country=${encodeURIComponent(searchArgs.country)}`);
+  }
+
+  if (searchCriteria.length === 0) {
+    return [];
+  }
+
+  const queryString = searchCriteria.join('&');
+  return medplum.searchResources("Organization", queryString);
 }
 
 // Example usage (for testing purposes, can be removed or moved to a test file)
@@ -165,7 +255,7 @@ async function testOrganizationTools() {
 
   // Test getOrganizationById
   try {
-    const fetchedOrg = await getOrganizationById(orgId);
+    const fetchedOrg = await getOrganizationById({ organizationId: orgId });
     if (fetchedOrg) {
       console.log('Fetched Org Name:', fetchedOrg.name);
     } else {

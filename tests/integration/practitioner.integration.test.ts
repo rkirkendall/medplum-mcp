@@ -72,7 +72,7 @@ describe('Practitioner Tools Integration Tests', () => {
 
     it('should return undefined for a non-existent practitioner ID', async () => {
       const practitioner = await getPractitionerById('non-existent-id-12345');
-      expect(practitioner).toBeUndefined();
+      expect(practitioner).toBeNull();
     });
   });
 
