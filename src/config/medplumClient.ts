@@ -1,60 +1,50 @@
-import 'dotenv/config'; // Load environment variables from .env file
-import { MedplumClient } from '@medplum/core';
-import fetch from 'node-fetch'; // Import node-fetch
+import { MedplumClient as MedplumClientSDK } from '@medplum/core';
+import fetch from 'node-fetch'; // Required for Node.js environment
+import { config } from 'dotenv';
 
-const effectiveBaseUrl = process.env.MEDPLUM_BASE_URL || 'http://localhost:8103/';
-console.log('[Medplum MCP] Initializing MedplumClient with baseUrl:', effectiveBaseUrl);
+config(); // Load environment variables from .env file
 
-export const medplum = new MedplumClient({
-  baseUrl: effectiveBaseUrl, // Default Medplum Docker API port
-  clientId: process.env.MEDPLUM_CLIENT_ID, // To be configured
-  fetch: fetch as any, // Medplum SDK needs fetch
+const { MEDPLUM_BASE_URL, MEDPLUM_CLIENT_ID, MEDPLUM_CLIENT_SECRET } = process.env;
+
+if (!MEDPLUM_CLIENT_ID || !MEDPLUM_CLIENT_SECRET) {
+  console.error('Missing Medplum client ID or secret in .env file');
+  // process.exit(1); // Consider how to handle this in a library context
+}
+
+export const medplum = new MedplumClientSDK({
+  baseUrl: MEDPLUM_BASE_URL || 'http://localhost:8103/', // Default if not set
+  fetch: fetch as any, // Explicitly pass fetch
+  clientId: MEDPLUM_CLIENT_ID,
+  clientSecret: MEDPLUM_CLIENT_SECRET,
+  // tokenStorage: new FileSystemStorage('medplum.json'), // Optional: for persistent token storage
+  // log: console.log, // Optional: for logging
 });
 
+// Export the type alias if needed by other modules
+export type MedplumClient = MedplumClientSDK;
+
 /**
- * Ensures the Medplum client is authenticated.
- * For local development, this attempts to log in using environment variables
- * for MEDPLUM_CLIENT_ID and MEDPLUM_CLIENT_SECRET.
- *
- * IMPORTANT: This basic authentication is for local development ONLY.
- * For production, a proper OAuth/OpenID Connect flow should be implemented.
+ * Ensures that the Medplum client is authenticated.
+ * If not authenticated, it will attempt to start client credentials login.
+ * @param client The MedplumClient instance to check and authenticate.
+ * Throws an error if authentication fails.
  */
 export async function ensureAuthenticated(): Promise<void> {
+  // The MedplumClient automatically handles token refresh if a client secret is provided.
+  // We just need to ensure the initial login or that a token is present.
+  // console.log('Checking Medplum authentication...');
   if (!medplum.getActiveLogin()) {
-    console.log('No active Medplum login. Attempting client credentials grant...');
-    const clientId = process.env.MEDPLUM_CLIENT_ID;
-    const clientSecret = process.env.MEDPLUM_CLIENT_SECRET;
-
-    if (!clientId || !clientSecret) {
-      console.error(
-        'Error: MEDPLUM_CLIENT_ID and MEDPLUM_CLIENT_SECRET environment variables are required for authentication.'
-      );
-      console.log(
-        'Please create a ClientApplication in your Medplum instance (e.g., at http://localhost:3000/admin/project) ' +
-        'and set these environment variables.'
-      );
-      throw new Error('Medplum client credentials not configured.');
-    }
-
+    console.log('No active login. Attempting client credentials grant...');
     try {
-      await medplum.startClientLogin(clientId, clientSecret);
-      console.log('Medplum client authenticated successfully using client credentials.');
-    } catch (err) {
-      console.error('Error authenticating Medplum client with client_credentials:', err);
-      const adminEmail = process.env.MEDPLUM_ADMIN_EMAIL || 'ricky+1test1@gmail.com';
-      const adminPassword = process.env.MEDPLUM_ADMIN_PASSWORD || '5gyXgkRW579BBrv';
-      console.log(`Attempting login with super admin: ${adminEmail} - THIS IS FOR DEV ONLY`);
-      try {
-        await medplum.startLogin({
-          email: adminEmail,
-          password: adminPassword,
-          remember: false,
-        });
-        console.log('Medplum client authenticated successfully using basic login (admin).');
-      } catch (basicLoginErr) {
-        console.error('Error authenticating Medplum client with basic login:', basicLoginErr);
-        throw new Error('Medplum client authentication failed. Check credentials and server status.');
-      }
+      await medplum.startClientLogin(MEDPLUM_CLIENT_ID as string, MEDPLUM_CLIENT_SECRET as string);
+      console.log('Client credentials login successful.');
+    } catch (error) {
+      console.error('Medplum client authentication failed:', error);
+      throw new Error('Medplum client authentication failed.');
     }
+  } else {
+    // console.log('Medplum client is already authenticated.');
+    // You might want to check if the token is close to expiring and refresh proactively
+    // but the SDK should handle this automatically on the next request if needed.
   }
 } 

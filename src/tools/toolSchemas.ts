@@ -451,6 +451,103 @@ export const toolSchemas = [
       required: [], // Function logic might require at least one or warn for broad searches
     },
   },
+  // MedicationRequest Tool Schemas (Add these as per medicationRequestUtils.ts)
+  // ... (Assuming MedicationRequest schemas are already here or will be added separately)
+
+  // Medication Tool Schemas
+  {
+    name: 'createMedication',
+    description: 'Creates a new Medication resource. Requires at least a code system and code value.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        code_coding_system: {
+          type: 'string',
+          description: "The system for the medication code (e.g., 'http://www.nlm.nih.gov/research/umls/rxnorm').",
+        },
+        code_coding_code: {
+          type: 'string',
+          description: 'The value for the medication code (e.g., \'313782\').',
+        },
+        code_coding_display: {
+          type: 'string',
+          description: 'Optional display text for the medication code (e.g., \'Amoxicillin 250mg Oral Tablet\').',
+        },
+        code_text: {
+          type: 'string',
+          description: 'Optional fallback text for the overall medication code concept.',
+        },
+        status: {
+          type: 'string',
+          description: "The status of the medication. Optional.",
+          enum: ['active', 'inactive', 'entered-in-error'],
+        },
+        manufacturer_reference: {
+          type: 'string',
+          description: 'Optional reference to the manufacturer Organization (e.g., \"Organization/123\").',
+        },
+        form_coding_system: {
+          type: 'string',
+          description: "Optional: The system for the medication form code (e.g., 'http://snomed.info/sct').",
+        },
+        form_coding_code: {
+          type: 'string',
+          description: "Optional: The value for the medication form code (e.g., \'385055001\').",
+        },
+        form_coding_display: {
+          type: 'string',
+          description: "Optional: Display text for the medication form code (e.g., \'Oral tablet\').",
+        },
+        form_text: {
+          type: 'string',
+          description: 'Optional: Fallback text for the overall medication form concept.',
+        },
+        identifier_system: {
+          type: 'string',
+          description: "Optional: System for a medication identifier (e.g., 'http://hl7.org/fhir/sid/ndc').",
+        },
+        identifier_value: {
+          type: 'string',
+          description: 'Optional: Value for the medication identifier.',
+        },
+      },
+      required: ['code_coding_system', 'code_coding_code'],
+    },
+  },
+  {
+    name: 'getMedicationById',
+    description: 'Retrieves a Medication resource by its unique ID.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        medicationId: { type: 'string', description: 'The unique ID of the Medication to retrieve.' },
+      },
+      required: ['medicationId'],
+    },
+  },
+  {
+    name: 'searchMedications',
+    description: 'Searches for Medication resources based on code, identifier, or status. Provide at least one criterion.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        code: {
+          type: 'string',
+          description: "Search by medication code. Can be a simple string (e.g., 'Aspirin') or system|value (e.g., 'http://www.nlm.nih.gov/research/umls/rxnorm|1191'). Optional.",
+        },
+        identifier: {
+          type: 'string',
+          description: "Search by medication identifier. Can be a simple value or system|value. Optional.",
+        },
+        status: {
+          type: 'string',
+          description: "Search by medication status. Optional.",
+          enum: ['active', 'inactive', 'entered-in-error'],
+        },
+      },
+      required: [], // Function logic requires at least one criterion
+    },
+  },
 ];
 
 // Example of how an LLM might be instructed to use this:
