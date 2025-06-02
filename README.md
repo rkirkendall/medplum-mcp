@@ -1,44 +1,61 @@
 # Medplum MCP Server
 
-## Project Description
+## 🚀 Project Description
 
-This project implements a Model Context Protocol (MCP) server for interacting with a Medplum FHIR server. The MCP server provides a standardized interface that allows Large Language Models (LLMs) to perform Create, Read, Update, and Search (CRUDS) operations on various FHIR resources through a suite of tools. This enables natural language commands to manage healthcare data stored in Medplum via the Model Context Protocol standard.
+This project implements a Model Context Protocol (MCP) server designed to seamlessly interact with a Medplum FHIR server. The MCP server provides a standardized interface, enabling Large Language Models (LLMs) to perform Create, Read, Update, and Search (CRUDS) operations on various FHIR resources through a comprehensive suite of tools. This empowers users to manage healthcare data stored in Medplum using natural language commands, which are intelligently translated into specific actions on the FHIR server via the Model Context Protocol standard.
 
-The primary goal is to allow users to manage patient information by conversing with an LLM, which then translates these requests into specific actions on the FHIR server via the MCP tools.
+The primary objective is to allow users to intuitively manage patient information by conversing with an LLM. The LLM, in turn, leverages the MCP tools to execute these requests against the FHIR server.
 
-## Current Status
+## ✨ Current Status
 
-This project is currently under active development. Core functionalities for managing Patient, Practitioner, and Organization resources have been implemented and tested.
+🚧 **This project is currently under active development** 🚧
 
-## Features Implemented
+**What's Implemented:**
+- ✅ Core FHIR resource management tools (Patient, Practitioner, Organization, Encounter, Observation, Medication, etc.)
+- ✅ OpenAI LLM integration and test harness
+- ✅ Comprehensive tool schemas for LLM interaction
+- ✅ Jest integration tests for all tools
+- ✅ Medplum FHIR server connectivity and authentication
 
-The MCP server currently supports the following FHIR resource management tools:
+**In Progress/Planned:**
+- 🔄 **MCP Server Protocol Implementation** (Critical missing component)
+- 🔄 Proper MCP client/server architecture
+- 🔄 JSON-RPC communication layer for MCP clients
+- 🔄 MCP-compatible tool registration and discovery
 
-*   **Patient Tools (`src/tools/patientUtils.ts`)**:
-    *   `createPatient`
-    *   `getPatientById`
-    *   `updatePatient`
-    *   `searchPatients`
-*   **Practitioner Tools (`src/tools/practitionerUtils.ts`)**:
-    *   `createPractitioner`
-    *   `getPractitionerById`
-    *   `updatePractitioner`
-    *   `searchPractitionersByName` (specific name search)
-    *   `searchPractitioners` (general criteria search)
-*   **Organization Tools (`src/tools/organizationUtils.ts`)**:
-    *   `createOrganization`
-    *   `getOrganizationById`
-    *   `updateOrganization`
-    *   `searchOrganizations`
-*   **Observation Tools (`src/tools/observationUtils.ts`)**:
-    *   `createObservation`
-    *   `getObservationById`
-    *   `updateObservation`
-    *   `searchObservations`
+**Current Limitations:**
+- The existing implementation uses direct OpenAI API integration rather than the standardized MCP protocol
+- Cannot be used with MCP clients (Claude Desktop, VS Code MCP extensions, etc.) without the protocol layer
 
-Each tool is exposed to the LLM via a defined JSON schema and is callable through a test harness (`src/llm-test-harness.ts`).
+## 🌟 Features Implemented
 
-## Technology Stack
+The MCP server currently supports a robust set of tools for managing various FHIR resources:
+
+*   **Patient Management (`src/tools/patientUtils.ts`)**:
+    *   `createPatient`: Create new patient records.
+    *   `getPatientById`: Retrieve patient details by ID.
+    *   `updatePatient`: Modify existing patient information.
+    *   `searchPatients`: Find patients based on various criteria.
+*   **Practitioner Management (`src/tools/practitionerUtils.ts`)**:
+    *   `createPractitioner`: Register new practitioners.
+    *   `getPractitionerById`: Fetch practitioner details by ID.
+    *   `updatePractitioner`: Update practitioner information.
+    *   `searchPractitionersByName`: Search for practitioners using their name.
+    *   `searchPractitioners`: Conduct general searches for practitioners based on multiple criteria.
+*   **Organization Management (`src/tools/organizationUtils.ts`)**:
+    *   `createOrganization`: Add new healthcare organizations.
+    *   `getOrganizationById`: Retrieve organization details by ID.
+    *   `updateOrganization`: Update organization information.
+    *   `searchOrganizations`: Search for organizations.
+*   **Observation Management (`src/tools/observationUtils.ts`)**:
+    *   `createObservation`: Record new observations (e.g., lab results, vital signs).
+    *   `getObservationById`: Get observation details by ID.
+    *   `updateObservation`: Modify existing observations.
+    *   `searchObservations`: Search for observations.
+
+Each tool is exposed to the LLM via a well-defined JSON schema and is callable through a dedicated test harness (`src/llm-test-harness.ts`), facilitating robust testing and integration.
+
+## 🛠️ Technology Stack
 
 *   **Runtime**: Node.js
 *   **Language**: TypeScript
@@ -49,20 +66,19 @@ Each tool is exposed to the LLM via a defined JSON schema and is callable throug
 *   **Environment Management**: `dotenv`
 *   **HTTP Client (for Medplum SDK)**: `node-fetch`
 
-## Project Structure
+## 📁 Project Structure
 
 ```
 medplum-mcp/
-├── src/
-│   ├── config/             # Medplum client configuration (medplumClient.ts)
-│   ├── tools/              # FHIR resource utility functions (patientUtils.ts, etc.)
-│   ├── lib/                # (Currently unused, for future shared libraries)
-│   ├── index.ts            # Main application entry point
+├── src/                  # Source code
+│   ├── config/           # Medplum client configuration (medplumClient.ts)
+│   ├── tools/            # FHIR resource utility functions (patientUtils.ts, etc.)
+│   ├── lib/              # Shared libraries (currently unused)
+│   ├── index.ts          # Main application entry point
 │   ├── llm-test-harness.ts # Script for testing LLM tool calling
 │   └── test-connection.ts  # Script for basic Medplum connection test
-├── tests/
-│   └── integration/        # Jest integration tests for tools
-├── .env.example            # Example environment file
+├── tests/                # Test suites
+│   └── integration/      # Jest integration tests for tools
 ├── .eslintrc.js
 ├── .gitignore
 ├── .prettierrc.js
@@ -72,12 +88,12 @@ medplum-mcp/
 └── README.md
 ```
 
-## Setup and Configuration
+## ⚙️ Setup and Configuration
 
 1.  **Prerequisites**:
-    *   Node.js (refer to `package.json` for engine specifics, though generally LTS versions)
-    *   A running Medplum server instance (e.g., local Dockerized instance at `http://localhost:8103/`).
-    *   Medplum client credentials (Client ID and Client Secret).
+    *   Node.js (refer to `package.json` for engine specifics; LTS versions recommended)
+    *   A running Medplum server instance (e.g., local Dockerized instance at `http://localhost:8103/`)
+    *   Medplum client credentials (Client ID and Client Secret)
 
 2.  **Installation**:
     ```bash
@@ -91,48 +107,37 @@ medplum-mcp/
     ```bash
     cp .env.example .env
     ```
-    Update the `.env` file with your Medplum server details:
-    ```
+    Then, update the `.env` file with your specific Medplum server details and API keys:
+    ```dotenv
     MEDPLUM_BASE_URL=http://your-medplum-server-url/
     MEDPLUM_CLIENT_ID=your_client_id
     MEDPLUM_CLIENT_SECRET=your_client_secret
     OPENAI_API_KEY=your_openai_api_key # Required for llm-test-harness.ts
     ```
 
-## Usage
+## 🚀 Usage
 
-### Running the Application (Main Entry - `src/index.ts`)
-The main entry point `src/index.ts` is intended for future application logic (e.g., a chat server). Currently, it might contain basic setup or be minimal.
+### ▶️ Running the Application (Main Entry - `src/index.ts`)
+The main entry point `src/index.ts` is intended for future application logic, such as a chat server. Currently, it may contain basic setup or be minimal.
 ```bash
-npm start # (Runs compiled JS from outDir)
-npm run dev # (Runs TypeScript using ts-node-dev for development)
+npm start # Runs compiled JavaScript from the outDir
+npm run dev # Runs TypeScript using ts-node-dev for development with live reloading
 ```
 
-### LLM Test Harness
+### 🧪 LLM Test Harness
 To test the interaction between natural language queries, the LLM (OpenAI), and the implemented Medplum tools:
 ```bash
-npm run test:harness # Assuming a script is added to package.json for this
+# Ensure OPENAI_API_KEY is set in your .env file
+npm run test:harness 
 # or directly:
 # npx ts-node src/llm-test-harness.ts
 ```
-The harness (`src/llm-test-harness.ts`) contains example queries that trigger various tools.
+The harness (`src/llm-test-harness.ts`) contains example queries that trigger various tools, allowing for direct observation of the LLM's tool selection and parameter extraction.
 
-### Basic Connection Test
-To verify the connection to your Medplum server and client authentication:
-```bash
-npm run test:connection
-```
-
-## Testing
-
-### Linting and Formatting
-```bash
-npm run lint
-npm run format
-```
-
-### Integration Tests
+## ✅ Testing
+### 🔗 Integration Tests
 Integration tests use Jest and interact with a live Medplum instance (configured via `.env`).
+
 To run all integration tests:
 ```bash
 npx jest tests/integration
@@ -142,12 +147,15 @@ To run specific integration test files:
 npx jest tests/integration/patient.integration.test.ts
 npx jest tests/integration/practitioner.integration.test.ts
 npx jest tests/integration/organization.integration.test.ts
+# Add other specific test files as needed
 ```
 
 
-# Medplum MCP Server Implementation Plan
+# 📝 Medplum MCP Server Implementation Plan
 
 This plan outlines the steps to build a Model Context Protocol (MCP) server for interacting with a Medplum FHIR server via a chat-based interface powered by an LLM. The MCP server will provide standardized tools for creating, reading, updating, and searching FHIR resources.
+
+**⚠️ Important Note:** The current implementation includes FHIR resource tools and an OpenAI test harness, but **lacks the actual MCP server protocol implementation**. The existing `llm-test-harness.ts` is a direct OpenAI integration, not a standardized MCP server that can be used by MCP clients.
 
 **General Workflow Note:** After completing each phase or significant step that results in runnable code or configuration changes, we will identify and execute relevant test or verification commands. For commands requiring interaction with the local Medplum instance or user-specific setup, I will prompt you to run them and then analyze the output you provide. For self-contained checks (e.g., linting), I may run the command directly.
 
@@ -324,7 +332,45 @@ For each resource, we need tools for `create`, `readById`, `update`, and `search
         - Utility function in `src/tools/generalFhirSearchUtils.ts`.
         - Integration tests in `tests/integration/generalFhirSearch.integration.test.ts` passed.
 
-## Phase 3: LLM Interaction & Orchestration
+## Phase 3: MCP Server Protocol Implementation
+
+**Status: ❌ NOT IMPLEMENTED - This is the missing critical component**
+
+- [ ] **Install MCP SDK Dependencies**
+    - Notes:
+        - Install `@modelcontextprotocol/sdk-typescript` or equivalent MCP SDK
+        - Install additional dependencies for MCP server implementation (e.g., WebSocket support, JSON-RPC)
+        - Update `package.json` with MCP-specific dependencies
+
+- [ ] **Implement MCP Server Core**
+    - Notes:
+        - Create `src/mcp-server.ts` - the main MCP server implementation
+        - Implement MCP protocol handlers (initialize, list_tools, call_tool, etc.)
+        - Set up JSON-RPC communication layer for MCP clients
+        - Configure transport layer (stdio, WebSocket, or HTTP)
+
+- [ ] **Integrate FHIR Tools with MCP Protocol**
+    - Notes:
+        - Convert existing tool schemas from OpenAI format to MCP format
+        - Map existing FHIR tools (`patientUtils`, `practitionerUtils`, etc.) to MCP tool calls
+        - Implement proper MCP tool registration and discovery
+        - Ensure tool responses conform to MCP standards
+
+- [ ] **MCP Server Configuration & Manifest**
+    - Notes:
+        - Create MCP server manifest/configuration file
+        - Define server capabilities and metadata
+        - Set up proper error handling and logging for MCP protocol
+        - Configure server endpoints and communication protocols
+
+- [ ] **MCP Client Integration Testing**
+    - Notes:
+        - Test with actual MCP clients (Claude Desktop, VS Code with MCP extension, etc.)
+        - Verify tool discovery works correctly
+        - Test tool execution and response handling
+        - Replace or supplement the current OpenAI test harness with MCP client testing
+
+## Phase 4: LLM Interaction & Orchestration (Previously Phase 3)
 
 - [x] **Define Tool Schema for LLM**
     - Notes: JSON schemas defined in `src/tools/toolSchemas.ts` for all implemented Patient and Practitioner tools. Iteratively refined based on LLM performance (e.g., `searchPatients` uses direct parameters).
@@ -369,3 +415,17 @@ For each resource, we need tools for `create`, `readById`, `update`, and `search
             2. LLM identifies "blood panel", "sed test" -> maps to Observation codes.
             3. LLM identifies the current Encounter (or creates one if necessary, linking to Patient and Dr. Stevens).
             4. LLM calls `createObservation`
+
+## Phase 5: Advanced Features & Production Readiness
+
+- [ ] **Implement Advanced Features**
+    - Notes:
+        - Add new tools or enhance existing ones
+        - Implement advanced features like multi-step workflows, conditional logic, and complex decision-making
+        - Ensure compatibility with existing tools and integration points
+
+- [ ] **Production Readiness**
+    - Notes:
+        - Perform thorough testing and validation
+        - Ensure stability and reliability
+        - Prepare for production deployment
