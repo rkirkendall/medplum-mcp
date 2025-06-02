@@ -548,7 +548,210 @@ export const toolSchemas = [
       required: [], // Function logic requires at least one criterion
     },
   },
+  // EpisodeOfCare Tool Schemas
+  {
+    name: 'createEpisodeOfCare',
+    description: 'Creates a new EpisodeOfCare for a patient. Requires patient ID and status.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        patientId: { type: 'string', description: "The ID of the patient for whom this episode of care is being created." },
+        status: { 
+          type: 'string', 
+          description: "The status of the episode of care.",
+          enum: ['planned', 'waitlist', 'active', 'onhold', 'finished', 'cancelled', 'entered-in-error']
+        },
+        managingOrganizationId: { type: 'string', description: "Optional. ID of the organization managing this episode of care." },
+        careManagerId: { type: 'string', description: "Optional. ID of the practitioner who is the care manager for this episode." },
+        type: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              coding: {
+                type: 'array',
+                items: {
+                  type: 'object',
+                  properties: {
+                    system: { type: 'string', description: "The URI for the coding system (e.g., 'http://terminology.hl7.org/CodeSystem/episodeofcare-type')." },
+                    code: { type: 'string', description: "The code from the coding system (e.g., 'hacc')." },
+                    display: { type: 'string', description: "Optional. The display name for the code." }
+                  },
+                  required: ['system', 'code']
+                }
+              },
+              text: { type: 'string', description: "Optional. Plain text representation of the type." }
+            },
+            // required: ['coding'] // A type can be just text
+          },
+          description: "Optional. Type of episode of care, e.g., Home and Community Care. Provide an array of CodeableConcept objects."
+        },
+        periodStart: { type: 'string', format: 'date-time', description: "Optional. The start date/time of the episode of care (ISO8601 format)." },
+        periodEnd: { type: 'string', format: 'date-time', description: "Optional. The end date/time of the episode of care (ISO8601 format)." },
+        identifier: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              system: { type: 'string', description: "The system for the identifier (e.g., 'urn:oid:1.2.3.4.5')." },
+              value: { type: 'string', description: "The value of the identifier." }
+            },
+            required: ['value']
+          },
+          description: "Optional. One or more identifiers for this episode of care."
+        }
+      },
+      required: ['patientId', 'status']
+    }
+  },
+  {
+    name: 'getEpisodeOfCareById',
+    description: 'Retrieves a specific EpisodeOfCare resource by its ID.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        episodeOfCareId: { type: 'string', description: 'The unique ID of the EpisodeOfCare to retrieve.' }
+      },
+      required: ['episodeOfCareId']
+    }
+  },
+  {
+    name: 'updateEpisodeOfCare',
+    description: 'Updates an existing EpisodeOfCare. Requires the EpisodeOfCare ID and the fields to update.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        episodeOfCareId: { type: 'string', description: 'The unique ID of the EpisodeOfCare to update.' },
+        status: { 
+          type: 'string', 
+          description: "New status for the episode of care. Optional.",
+          enum: ['planned', 'waitlist', 'active', 'onhold', 'finished', 'cancelled', 'entered-in-error']
+        },
+        type: { /* Same as in createEpisodeOfCare, optional */ type: 'array', items: { '$ref': '#/definitions/episodeOfCareTypeItem' }, description: "Optional. New list of types for the episode of care. This will replace the existing types." },
+        periodStart: { type: 'string', format: 'date-time', description: "Optional. New start date/time (ISO8601)." },
+        periodEnd: { type: 'string', format: 'date-time', description: "Optional. New end date/time (ISO8601)." },
+        managingOrganizationId: { type: 'string', description: "Optional. New ID of the managing organization. Provide an empty string or null (if supported by LLM) to remove." },
+        careManagerId: { type: 'string', description: "Optional. New ID of the care manager. Provide an empty string or null to remove." }
+        // Diagnosis updates are complex and typically handled differently, so not included in simple updates.
+      },
+      required: ['episodeOfCareId'] // At least one update field is implicitly required
+    }
+  },
+  {
+    name: 'searchEpisodesOfCare',
+    description: 'Searches for EpisodeOfCare resources based on specified criteria. At least one search parameter must be provided.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        patient: { type: 'string', description: "Patient ID (e.g., '123' or 'Patient/123')." },
+        status: { type: 'string', description: "Status of the episode (e.g., 'active', or 'active,onhold')." },
+        type: { type: 'string', description: "Type of episode, token search (e.g., 'hacc' or 'http://sys|code')." },
+        date: { 
+            oneOf: [
+                { type: 'string', description: "Date or date range (e.g., '2023-01-01', 'ge2023-01-01&le2023-12-31')." },
+                { type: 'array', items: { type: 'string' }, description: "Array of date parameters (e.g., ['ge2023-01-01', 'le2023-12-31'])." }
+            ],
+            description: "Search by period start/end date." 
+        },
+        identifier: { type: 'string', description: "Identifier for the episode (e.g., 'urn:sys|value' or 'value')." },
+        organization: { type: 'string', description: "Managing organization ID (e.g., 'Organization/456' or '456')." }, // Changed from managing-organization
+        'care-manager': { type: 'string', description: "Care manager (Practitioner) ID (e.g., 'Practitioner/789' or '789')." }
+      },
+      required: [] // Function logic enforces at least one criterion
+    }
+  },
+  // General FHIR Search Tool Schema
+  {
+    name: 'generalFhirSearch',
+    description: 'Performs a generic search for any FHIR resource type using specified query parameters. Useful when the exact resource type is known and specific search criteria need to be applied, or for resource types not covered by other specialized tools.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        resourceType: {
+          type: 'string',
+          description: "The FHIR resource type to search for (e.g., 'Patient', 'Observation', 'MedicationRequest'). This must be a valid FHIR resource type name.",
+          // Potentially add an enum of common ResourceTypes if helpful for LLM, but can be very long.
+          // Example enum (partial): enum: ['Patient', 'Practitioner', 'Organization', 'Encounter', 'Observation', 'MedicationRequest', 'Condition', 'Procedure', 'DiagnosticReport']
+        },
+        queryParams: {
+          type: 'object',
+          description: "An object where keys are FHIR search parameters (e.g., 'name', 'date', '_id', 'patient') and values are the corresponding search values. For parameters that can appear multiple times (like 'date' for a range), provide an array of strings as the value (e.g., { date: ['ge2023-01-01', 'le2023-01-31'] }). For token parameters (codeableConcepts), provide the value as 'system|code' or just 'code'. For reference parameters, use 'ResourceType/id' or just 'id'.",
+          additionalProperties: {
+            oneOf: [
+              { type: 'string' },
+              { type: 'number' },
+              { type: 'boolean' },
+              { type: 'array', items: { type: 'string' } }
+            ]
+          },
+          example: {
+            _id: "12345",
+            status: "active",
+            "patient.name": "John Doe",
+            date: ["ge2024-01-01", "le2024-01-31"]
+          }
+        }
+      },
+      required: ['resourceType', 'queryParams']
+    }
+  }
 ];
+
+// Helper definition for EpisodeOfCare type items, used in create/update schemas via $ref
+// This avoids repetition and ensures consistency.
+// Note: JSON Schema $ref might need specific handling or flattening depending on the LLM/tooling.
+// For simplicity, if $ref is problematic, duplicate the structure.
+// As of now, the LLM might not support $ref, so it's better to inline for `type` in `updateEpisodeOfCare`
+// I will remove the $ref for now.
+/*
+toolSchemas.definitions = {
+  episodeOfCareTypeItem: {
+    type: 'object',
+    properties: {
+      coding: {
+        type: 'array',
+        items: {
+          type: 'object',
+          properties: {
+            system: { type: 'string', description: "The URI for the coding system." },
+            code: { type: 'string', description: "The code from the coding system." },
+            display: { type: 'string', description: "Optional. Display name." }
+          },
+          required: ['system', 'code']
+        }
+      },
+      text: { type: 'string', description: "Optional. Plain text representation." }
+    }
+  }
+};
+*/
+
+// Adjusting updateEpisodeOfCare to inline the type definition if $ref is not ideal
+const updateEpisodeOfCareSchema = toolSchemas.find(s => s.name === 'updateEpisodeOfCare');
+if (updateEpisodeOfCareSchema && updateEpisodeOfCareSchema.input_schema.properties.type) {
+  updateEpisodeOfCareSchema.input_schema.properties.type = {
+    type: 'array',
+    items: { // Inlined structure
+      type: 'object',
+      properties: {
+        coding: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              system: { type: 'string', description: "The URI for the coding system (e.g., 'http://terminology.hl7.org/CodeSystem/episodeofcare-type')." },
+              code: { type: 'string', description: "The code from the coding system (e.g., 'hacc')." },
+              display: { type: 'string', description: "Optional. The display name for the code." }
+            },
+            required: ['system', 'code']
+          }
+        },
+        text: { type: 'string', description: "Optional. Plain text representation of the type." }
+      }
+    },
+    description: "Optional. New list of types for the episode of care. This will replace the existing types."
+  };
+}
 
 // Example of how an LLM might be instructed to use this:
 // "If you need to find a practitioner, you can use the 'searchPractitionersByName' tool.

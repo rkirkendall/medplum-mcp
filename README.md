@@ -292,28 +292,37 @@ For each resource, we need tools for `create`, `readById`, `update`, and `search
         - `searchMedicationRequests(criteria: { patientId?: string, medicationCode?: string, prescriberId?: string })`
     - Notes: Differentiate between MedicationRequest and Medication (the actual drug).
 
-- [ ] **Tool: `manageMedication`**
+- [x] **Tool: `manageMedication`**
     - Description: Handles Medication resources (details about a specific drug).
     - Sub-actions:
-        - `createMedication(details: Medication)` (less common, often Medications are pre-loaded or referenced)
-        - `getMedicationById(id: string)`
-        - `searchMedications(criteria: { code?: string, name?: string })`
+        - [x] `createMedication(details: CreateMedicationArgs)` (less common, often Medications are pre-loaded or referenced)
+        - [x] `getMedicationById(id: string)`
+        - `searchMedications(criteria: { code?: string, identifier?: string, status?: string })`
     - Notes: Used by MedicationRequest. Might involve searching a drug database or pre-loaded list.
+        - Schemas defined in `src/tools/toolSchemas.ts`.
+        - Utility functions in `src/tools/medicationUtils.ts`.
+        - Integration tests in `tests/integration/medication.integration.test.ts` passed.
 
-- [ ] **Tool: `manageEpisodeOfCare`**
+- [x] **Tool: `manageEpisodeOfCare`**
     - Description: Handles EpisodeOfCare resources to group related encounters and conditions.
     - Sub-actions:
-        - `createEpisodeOfCare(details: EpisodeOfCare)`: Links to Patient, managingOrganization.
-        - `getEpisodeOfCareById(id: string)`
-        - `updateEpisodeOfCare(id: string, updates: Partial<EpisodeOfCare>)` (e.g., change status, add encounters)
-        - `searchEpisodesOfCare(criteria: { patientId?: string, status?: string, type?: string })`
+        - [x] `createEpisodeOfCare(details: CreateEpisodeOfCareArgs)`: Links to Patient, managingOrganization.
+        - [x] `getEpisodeOfCareById(id: string)`
+        - [x] `updateEpisodeOfCare(id: string, updates: UpdateEpisodeOfCareArgs)` (e.g., change status, add encounters)
+        - [x] `searchEpisodesOfCare(criteria: EpisodeOfCareSearchArgs)`
     - Notes: Crucial for the "ongoing health episode" concept. Encounters, conditions, procedures can be linked.
+        - Schemas defined in `src/tools/toolSchemas.ts`.
+        - Utility functions in `src/tools/episodeOfCareUtils.ts`.
+        - Integration tests in `tests/integration/episodeOfCare.integration.test.ts` passed.
 
-- [ ] **Tool: `GeneralFhirSearch`**
+- [x] **Tool: `GeneralFhirSearch`**
     - Description: A more generic search tool if specific resource type is unknown or for broader queries.
-    - Action: `searchResource(resourceType: FHIR_RESOURCE_TYPE, queryParams: Record<string, string>)`
+    - Action: `searchResource(resourceType: FHIR_RESOURCE_TYPE, queryParams: Record<string, string | number | boolean | string[]>)`
     - SDK: `medplum.search(resourceType, queryParams)`
     - Notes: Provides flexibility but requires careful query construction.
+        - Schema defined in `src/tools/toolSchemas.ts`.
+        - Utility function in `src/tools/generalFhirSearchUtils.ts`.
+        - Integration tests in `tests/integration/generalFhirSearch.integration.test.ts` passed.
 
 ## Phase 3: LLM Interaction & Orchestration
 
@@ -359,48 +368,4 @@ For each resource, we need tools for `create`, `readById`, `update`, and `search
             1. LLM identifies "Dr. Stevens" -> `searchPractitioners(name: 'Stevens')` -> gets Practitioner ID.
             2. LLM identifies "blood panel", "sed test" -> maps to Observation codes.
             3. LLM identifies the current Encounter (or creates one if necessary, linking to Patient and Dr. Stevens).
-            4. LLM calls `createObservation` for the blood panel and `createObservation` for the sed test, linking both to the Encounter and Patient.
-            5. The `EpisodeOfCare` for the father should be identified or created, and the new `Encounter` linked to it.
-
-- [ ] **Error Handling and Feedback to LLM**
-    - Notes: MCP server tools should return clear success/failure messages and any relevant data or error details. The LLM will use this to inform the user or adjust its strategy.
-
-## Phase 4: Advanced Features & Refinements
-
-- [ ] **Semantic Search Implementation**
-    - Notes: Beyond simple field-based search.
-        - If Medplum supports text search across resources or specific fields (`_text` or `_content` parameters), leverage that.
-        - Otherwise, this might involve fetching relevant resources and then using an embedding model + vector search locally within the MCP or as a separate microservice if searching large amounts of text data (e.g., clinical notes, though this example focuses on structured data). For now, focus on Medplum's built-in search.
-        - "User mentions a 'doctor tom' so we do a provider search on a doc w first name 'tom'" will primarily use `searchPractitioners` with appropriate name parameters.
-
-- [ ] **Complex Utterance Decomposition (Primarily LLM task, MCP server enables)**
-    - Notes: This involves handling complex user utterances that require breaking down the request into a series of actions and tool calls. For example, processing a sentence that includes multiple actors, actions, and references to past events.
-    - The LLM needs to break this down into a sequence of actions/tool calls:
-        1. Identify/Create Patient (e.g., based on conversational context).
-        2. Identify/Create Practitioner ("Dr. Stevens", "PCP").
-        3. Create Encounter for today with Patient and Dr. Stevens.
-        4. Identify/Reference existing Observation ("x-ray from osteodoctor last week"). This implies a previous encounter and observation that need to be found.
-        5. Create Observation for "blood panel" linked to current Encounter.
-        6. Create Observation for "sed test" linked to current Encounter.
-        7. Log future potential actions (MedicationRequest for steroids, Referral to rheumatologist - potentially as `ServiceRequest` resources or notes within the `Encounter` or `EpisodeOfCare`).
-
-- [x] **Testing Strategy**
-    - [ ] Unit tests for each MCP server tool (using Jest/ts-jest, with Medplum SDK calls mocked).
-    - [x] Integration tests: Connect to the local Dockerized Medplum. Created `practitioner.integration.test.ts` and `patient.integration.test.ts` which test create, read, update, search against a live Medplum instance.
-    - [x] E2E testing (manual for now): Converse with the LLM (via `llm-test-harness.ts`) and verify data in Medplum (implicitly done through observing successful tool calls and results).
-
-- [x] **Expand and Iterate on LLM Integration Tests (via `llm-test-harness.ts`)**
-    - Notes: (Marking as complete for current scope of tools; this is an ongoing process as new tools are added)
-        - Continuously update and expand the test harness and test cases developed in Phase 1.5 as new MCP server tools are built.
-        - **Test individual tool calls:** Ensure the LLM correctly identifies and calls individual MCP server tools based on a variety of simple natural language prompts. Verify parameter extraction and mapping. (Done for Patient & Practitioner tools).
-        - **Test sequential/complex tool calls:** Develop scenarios where the LLM must make multiple tool calls in sequence. This includes using the output of one tool call as input for another to fulfill a complex user request (e.g., the detailed example utterance). (Partially done via create -> get/update/search sequence in harness).
-        - **Test context handling:** Ensure the LLM, with the support of the MCP server and conversation history, can correctly resolve references (e.g., "his PCP," "that medication").
-
-## Phase 5: Deployment & Operations (Future Consideration)
-
-- [ ] **Containerize MCP Server (Optional)**
-    - Notes: If the MCP server becomes a standalone service.
-- [ ] **Logging and Monitoring**
-    - Notes: Track tool usage, errors, performance.
-- [ ] **Security and Compliance**
-    - Notes: Ensure all interactions with Medplum are secure, and data handling complies with HIPAA if applicable. OAuth for Medplum client.
+            4. LLM calls `createObservation`
