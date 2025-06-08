@@ -17,10 +17,16 @@
     "start": "node dist/index.js",
     "test:connection": "ts-node src/test-connection.ts",
     "test:harness": "npx ts-node src/llm-test-harness.ts",
+    "test:chat": "npm run build && node dist/llm-test-harness.js",
     "test:mcp": "node dist/index.js",
     "prepare": "npm run build"
   },
-  "keywords": ["mcp", "medplum", "fhir", "healthcare"],
+  "keywords": [
+    "mcp",
+    "medplum",
+    "fhir",
+    "healthcare"
+  ],
   "author": "",
   "license": "ISC",
   "description": "MCP server for Medplum FHIR operations",
@@ -28,8 +34,11 @@
     "@medplum/core": "^4.1.6",
     "@medplum/fhirtypes": "^4.1.6",
     "@modelcontextprotocol/sdk": "^1.0.0",
+    "@types/readline-sync": "^1.4.8",
     "dotenv": "^16.5.0",
     "node-fetch": "^2.7.0",
+    "openai": "^5.1.1",
+    "readline-sync": "^1.4.10",
     "zod": "^3.23.8"
   },
   "devDependencies": {

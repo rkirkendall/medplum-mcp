@@ -14,6 +14,7 @@ The server implements the full MCP protocol specification, providing 22 comprehe
 - ✅ Core FHIR resource management tools (Patient, Practitioner, Organization, Encounter, Observation, Medication, etc.)
 - ✅ **MCP Server Protocol Implementation** - Full Model Context Protocol server with stdio transport
 - ✅ Comprehensive tool schemas for LLM interaction (22 FHIR tools)
+- ✅ **Interactive Chat Test Harness** - Full MCP client with natural language interface
 - ✅ Jest integration tests for all tools
 - ✅ Medplum FHIR server connectivity and authentication
 - ✅ MCP Inspector testing and validation
@@ -23,11 +24,13 @@ The server implements the full MCP protocol specification, providing 22 comprehe
 - 🔄 The MCP server is fully functional and ready for integration with MCP clients
 - 🔄 All 22 FHIR tools are properly registered and working
 - 🔄 Server successfully authenticates with Medplum and executes FHIR operations
+- 🔄 **Interactive chat test harness available** - Test all tools with natural language
 - 🔄 Tested with MCP Inspector - all tools discoverable and executable
 - 🔄 Claude Desktop configuration provided for immediate use
 
 **Current Capabilities:**
 - Full CRUD operations on FHIR resources through natural language
+- Interactive chat interface for testing and development
 - Seamless integration with any MCP-compatible client (Claude Desktop, VS Code MCP extensions, etc.)
 - Comprehensive error handling and logging
 - Production-ready MCP protocol implementation
@@ -122,22 +125,46 @@ medplum-mcp/
 
 ## 🚀 Usage
 
-### ▶️ Running the Application (Main Entry - `src/index.ts`)
-The main entry point `src/index.ts` is intended for future application logic, such as a chat server. Currently, it may contain basic setup or be minimal.
+### 💬 Interactive Chat Test Harness (Recommended)
+The most user-friendly way to test your MCP server is through the interactive chat interface:
+
 ```bash
-npm start # Runs compiled JavaScript from the outDir
-npm run dev # Runs TypeScript using ts-node-dev for development with live reloading
+# Build and run the chat test harness
+npm run test:chat
+
+# Or in development mode
+npx ts-node src/llm-test-harness.ts
 ```
 
-### 🧪 LLM Test Harness
-To test the interaction between natural language queries, the LLM (OpenAI), and the implemented Medplum tools:
-```bash
-# Ensure OPENAI_API_KEY is set in your .env file
-npm run test:harness 
-# or directly:
-# npx ts-node src/llm-test-harness.ts
+**Features:**
+- 🗣️ Natural language interaction with all 22 FHIR tools
+- 🔧 Automatic tool discovery and execution
+- 📋 Built-in help and examples
+- 🔄 Conversation context maintenance
+- ⚡ Real-time tool execution and results
+
+**Example Session:**
 ```
-The harness (`src/llm-test-harness.ts`) contains example queries that trigger various tools, allowing for direct observation of the LLM's tool selection and parameter extraction.
+🏥 You: Create a new patient Jane Smith born 1985-03-20
+🤖 Assistant: I'll create a new patient record for Jane Smith...
+
+🏥 You: Find all doctors named Stevens
+🤖 Assistant: I found 2 practitioners with the name Stevens...
+```
+
+See `CHAT_HARNESS_USAGE.md` for detailed usage instructions.
+
+### ▶️ Running the MCP Server Directly
+```bash
+npm start # Runs the MCP server with stdio transport
+npm run dev # Development mode with live reloading
+```
+
+### 🧪 Legacy Test Harness
+For programmatic testing:
+```bash
+npm run test:harness # Direct OpenAI integration (legacy)
+```
 
 ## ✅ Testing
 ### 🔗 Integration Tests
