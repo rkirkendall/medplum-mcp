@@ -258,11 +258,7 @@ export async function searchMedicationRequests(args: SearchMedicationRequestsArg
     searchCriteria.push(`intent=${args.intent}`);
   }
   if (args.code) {
-    if (args.codeSystem) {
-      searchCriteria.push(`code=${args.codeSystem}|${args.code}`);
-    } else {
-      searchCriteria.push(`code=${args.code}`);
-    }
+    searchCriteria.push(`code=${args.code}`);
   }
   if (args.authoredon) {
     searchCriteria.push(`authoredon=${args.authoredon}`);

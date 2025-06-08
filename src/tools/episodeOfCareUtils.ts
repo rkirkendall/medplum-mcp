@@ -102,7 +102,6 @@ export async function createEpisodeOfCare(
     console.log('EpisodeOfCare created successfully:', result.id);
     return result;
   } catch (error: any) {
-    console.error('Error creating EpisodeOfCare:', error);
     const outcome: OperationOutcome = {
       resourceType: 'OperationOutcome',
       issue: [
@@ -144,7 +143,6 @@ export async function getEpisodeOfCareById(
       console.log(`EpisodeOfCare with ID "${episodeOfCareId}" not found.`);
       return null;
     }
-    console.error(`Error retrieving EpisodeOfCare with ID "${episodeOfCareId}":`, error);
     const outcome: OperationOutcome = {
       resourceType: 'OperationOutcome',
       issue: [
@@ -249,7 +247,6 @@ export async function updateEpisodeOfCare(
     console.log('EpisodeOfCare updated successfully:', result.id);
     return result;
   } catch (error: any) {
-    console.error(`Error updating EpisodeOfCare "${episodeOfCareId}":`, error);
      if (error.outcome && error.outcome.issue && error.outcome.issue[0]?.code === 'not-found') {
       return {
         resourceType: 'OperationOutcome',
