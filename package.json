@@ -17,7 +17,7 @@
     "start": "node dist/index.js",
     "test:connection": "ts-node src/test-connection.ts",
     "test:harness": "npx ts-node src/llm-test-harness.ts",
-    "test:chat": "npm run build && node dist/llm-test-harness.js",
+    "chat": "npm run build && node dist/llm-test-harness.js",
     "test:mcp": "node dist/index.js",
     "prepare": "npm run build"
   },

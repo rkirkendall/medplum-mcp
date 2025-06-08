@@ -25,7 +25,7 @@ The MCP Chat Test Harness provides an interactive command-line interface to test
 
 ### Option 1: Using the npm script (recommended)
 ```bash
-npm run test:chat
+npm run chat
 ```
 
 ### Option 2: Direct execution
