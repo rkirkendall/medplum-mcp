@@ -469,3 +469,7 @@ For each resource, we need tools for `create`, `readById`, `update`, and `search
   - Inspector provides proper protocol testing, tool discovery, and execution testing
   - Server successfully responds to MCP protocol messages and tool execution requests
   - Ready for integration testing with actual MCP clients like Claude Desktop
+
+## 📄 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.

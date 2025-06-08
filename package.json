@@ -28,7 +28,7 @@
     "healthcare"
   ],
   "author": "",
-  "license": "ISC",
+  "license": "MIT",
   "description": "MCP server for Medplum FHIR operations",
   "dependencies": {
     "@medplum/core": "^4.1.6",
