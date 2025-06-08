@@ -32,18 +32,18 @@ export type MedplumClient = MedplumClientSDK;
 export async function ensureAuthenticated(): Promise<void> {
   // The MedplumClient automatically handles token refresh if a client secret is provided.
   // We just need to ensure the initial login or that a token is present.
-  // console.log('Checking Medplum authentication...');
+  // console.error('Checking Medplum authentication...');
   if (!medplum.getActiveLogin()) {
-    console.log('No active login. Attempting client credentials grant...');
+    console.error('No active login. Attempting client credentials grant...');
     try {
       await medplum.startClientLogin(MEDPLUM_CLIENT_ID as string, MEDPLUM_CLIENT_SECRET as string);
-      console.log('Client credentials login successful.');
+      console.error('Client credentials login successful.');
     } catch (error) {
       console.error('Medplum client authentication failed:', error);
       throw new Error('Medplum client authentication failed.');
     }
   } else {
-    // console.log('Medplum client is already authenticated.');
+    // console.error('Medplum client is already authenticated.');
     // You might want to check if the token is close to expiring and refresh proactively
     // but the SDK should handle this automatically on the next request if needed.
   }
