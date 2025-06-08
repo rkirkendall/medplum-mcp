@@ -111,11 +111,7 @@ medplum-mcp/
     ```
 
 3.  **Environment Variables**:
-    Create a `.env` file in the project root by copying `.env.example`:
-    ```bash
-    cp .env.example .env
-    ```
-    Then, update the `.env` file with your specific Medplum server details and API keys:
+    Create a `.env` file in the project root with your specific Medplum server details and API keys:
     ```dotenv
     MEDPLUM_BASE_URL=http://your-medplum-server-url/
     MEDPLUM_CLIENT_ID=your_client_id
