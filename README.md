@@ -4,7 +4,7 @@
 
 This project implements a **complete Model Context Protocol (MCP) server** designed to seamlessly interact with a Medplum FHIR server. The MCP server provides a standardized interface, enabling Large Language Models (LLMs) to perform Create, Read, Update, and Search (CRUDS) operations on various FHIR resources through a comprehensive suite of tools. This empowers users to manage healthcare data stored in Medplum using natural language commands through any MCP-compatible client (Claude Desktop, VS Code MCP extensions, etc.).
 
-The server implements the full MCP protocol specification, providing 22 comprehensive FHIR resource management tools that can be discovered and executed by any MCP client. Users can intuitively manage patient information, practitioners, organizations, encounters, observations, and more by conversing with an LLM that leverages the MCP tools to execute requests against the FHIR server.
+The server implements the full MCP protocol specification, providing 33 comprehensive FHIR resource management tools that can be discovered and executed by any MCP client. Users can intuitively manage patient information, practitioners, organizations, encounters, observations, and more by conversing with an LLM that leverages the MCP tools to execute requests against the FHIR server.
 
 ## ✨ Current Status
 
@@ -13,7 +13,7 @@ The server implements the full MCP protocol specification, providing 22 comprehe
 **What's Implemented:**
 - ✅ Core FHIR resource management tools (Patient, Practitioner, Organization, Encounter, Observation, Medication, etc.)
 - ✅ **MCP Server Protocol Implementation** - Full Model Context Protocol server with stdio transport
-- ✅ Comprehensive tool schemas for LLM interaction (22 FHIR tools)
+- ✅ Comprehensive tool schemas for LLM interaction (33 FHIR tools)
 - ✅ **Interactive Chat Harness** - Full MCP client with natural language interface
 - ✅ Jest integration tests for all tools
 - ✅ Medplum FHIR server connectivity and authentication
@@ -22,7 +22,7 @@ The server implements the full MCP protocol specification, providing 22 comprehe
 
 **Ready for Use:**
 - 🔄 The MCP server is fully functional and ready for integration with MCP clients
-- 🔄 All 22 FHIR tools are properly registered and working
+- ✅ All 33 FHIR tools are properly registered and working
 - 🔄 Server successfully authenticates with Medplum and executes FHIR operations
 - 🔄 **Interactive chat harness available** - Test all tools with natural language
 - 🔄 Tested with MCP Inspector - all tools discoverable and executable
@@ -60,6 +60,27 @@ The MCP server currently supports a robust set of tools for managing various FHI
     *   `getObservationById`: Get observation details by ID.
     *   `updateObservation`: Modify existing observations.
     *   `searchObservations`: Search for observations.
+*   **Medication Request Management (`src/tools/medicationRequestUtils.ts`)**:
+    *   `createMedicationRequest`: Create new medication requests (prescriptions).
+    *   `getMedicationRequestById`: Retrieve medication request details by ID.
+    *   `updateMedicationRequest`: Update medication request information.
+    *   `searchMedicationRequests`: Search for medication requests.
+*   **Medication Management (`src/tools/medicationUtils.ts`)**:
+    *   `createMedication`: Create new medication resources.
+    *   `getMedicationById`: Retrieve medication details by ID.
+    *   `searchMedications`: Search for medications by code or name.
+*   **Episode of Care Management (`src/tools/episodeOfCareUtils.ts`)**:
+    *   `createEpisodeOfCare`: Create new episodes of care for patients.
+    *   `getEpisodeOfCareById`: Retrieve episode of care details by ID.
+    *   `updateEpisodeOfCare`: Update episode of care information.
+    *   `searchEpisodesOfCare`: Search for episodes of care.
+*   **Encounter Management (`src/tools/encounterUtils.ts`)**:
+    *   `createEncounter`: Create new patient encounters.
+    *   `getEncounterById`: Retrieve encounter details by ID.
+    *   `updateEncounter`: Update encounter information.
+    *   `searchEncounters`: Search for encounters.
+*   **General FHIR Operations**:
+    *   `generalFhirSearch`: Generic FHIR search with custom parameters for any resource type.
 
 Each tool is exposed to the LLM via a well-defined JSON schema and is callable through a dedicated test harness (`src/llm-test-harness.ts`), facilitating robust testing and integration.
 
@@ -133,7 +154,7 @@ npx ts-node src/llm-test-harness.ts
 ```
 
 **Features:**
-- 🗣️ Natural language interaction with all 22 FHIR tools
+- 🗣️ Natural language interaction with all 33 FHIR tools
 - 🔧 Automatic tool discovery and execution
 - 📋 Built-in help and examples
 - 🔄 Conversation context maintenance

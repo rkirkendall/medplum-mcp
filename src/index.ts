@@ -374,9 +374,9 @@ const mcpTools = [
           description: "The status of the encounter.",
           enum: ["planned", "arrived", "triaged", "in-progress", "onleave", "finished", "cancelled"],
         },
-        class: {
+        classCode: {
           type: "string",
-          description: "The classification of the encounter (e.g., ambulatory, inpatient).",
+          description: "The classification of the encounter (e.g., AMB for ambulatory, IMP for inpatient, EMER for emergency).",
         },
         practitionerId: {
           type: "string",
@@ -387,7 +387,7 @@ const mcpTools = [
           description: "The ID of the organization providing the encounter. Optional.",
         },
       },
-      required: ["patientId", "status"],
+      required: ["patientId", "status", "classCode"],
     },
   },
   {
@@ -550,6 +550,238 @@ const mcpTools = [
       required: [],
     },
   },
+  // Medication Request Tools
+  {
+    name: "createMedicationRequest",
+    description: "Creates a new medication request (prescription). Requires patient ID, medication reference, and prescriber.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        patientId: {
+          type: "string",
+          description: "The ID of the patient this prescription is for.",
+        },
+        medicationReference: {
+          type: "string",
+          description: "Reference to the medication being prescribed.",
+        },
+        practitionerId: {
+          type: "string",
+          description: "The ID of the practitioner prescribing the medication.",
+        },
+        status: {
+          type: "string",
+          description: "The status of the medication request.",
+          enum: ["active", "on-hold", "cancelled", "completed", "entered-in-error", "stopped", "draft", "unknown"],
+        },
+        intent: {
+          type: "string",
+          description: "The intent of the medication request.",
+          enum: ["proposal", "plan", "order", "original-order", "reflex-order", "filler-order", "instance-order", "option"],
+        },
+      },
+      required: ["patientId", "medicationReference", "practitionerId", "status", "intent"],
+    },
+  },
+  {
+    name: "getMedicationRequestById",
+    description: "Retrieves a medication request by its unique ID.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        medicationRequestId: {
+          type: "string",
+          description: "The unique ID of the medication request to retrieve.",
+        },
+      },
+      required: ["medicationRequestId"],
+    },
+  },
+  {
+    name: "updateMedicationRequest",
+    description: "Updates an existing medication request. Requires the medication request ID and fields to update.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        medicationRequestId: {
+          type: "string",
+          description: "The unique ID of the medication request to update.",
+        },
+        status: {
+          type: "string",
+          description: "New status for the medication request.",
+          enum: ["active", "on-hold", "cancelled", "completed", "entered-in-error", "stopped", "draft", "unknown"],
+        },
+      },
+      required: ["medicationRequestId"],
+    },
+  },
+  {
+    name: "searchMedicationRequests",
+    description: "Searches for medication requests based on criteria like patient ID or medication.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        patientId: {
+          type: "string",
+          description: "The patient ID to search medication requests for. Optional.",
+        },
+        medicationReference: {
+          type: "string",
+          description: "The medication reference to filter by. Optional.",
+        },
+        practitionerId: {
+          type: "string",
+          description: "The practitioner ID to search medication requests for. Optional.",
+        },
+        status: {
+          type: "string",
+          description: "The medication request status to filter by. Optional.",
+          enum: ["active", "on-hold", "cancelled", "completed", "entered-in-error", "stopped", "draft", "unknown"],
+        },
+      },
+      required: [],
+    },
+  },
+  // Medication Tools
+  {
+    name: "createMedication",
+    description: "Creates a new medication resource. Requires medication code or identifier.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        code: {
+          type: "string",
+          description: "The code identifying the medication (e.g., RxNorm, SNOMED CT).",
+        },
+        display: {
+          type: "string",
+          description: "The display name of the medication.",
+        },
+        form: {
+          type: "string",
+          description: "The form of the medication (e.g., tablet, capsule, liquid).",
+        },
+      },
+      required: ["code"],
+    },
+  },
+  {
+    name: "getMedicationById",
+    description: "Retrieves a medication by its unique ID.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        medicationId: {
+          type: "string",
+          description: "The unique ID of the medication to retrieve.",
+        },
+      },
+      required: ["medicationId"],
+    },
+  },
+  {
+    name: "searchMedications",
+    description: "Searches for medications based on criteria like code or name.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        code: {
+          type: "string",
+          description: "The medication code to search for. Optional.",
+        },
+        name: {
+          type: "string",
+          description: "Part of the medication name to search for. Optional.",
+        },
+        form: {
+          type: "string",
+          description: "The medication form to filter by. Optional.",
+        },
+      },
+      required: [],
+    },
+  },
+  // Episode of Care Tools
+  {
+    name: "createEpisodeOfCare",
+    description: "Creates a new episode of care for a patient. Requires patient ID and status.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        patientId: {
+          type: "string",
+          description: "The ID of the patient this episode of care is for.",
+        },
+        status: {
+          type: "string",
+          description: "The status of the episode of care.",
+          enum: ["planned", "waitlist", "active", "onhold", "finished", "cancelled", "entered-in-error"],
+        },
+        managingOrganizationId: {
+          type: "string",
+          description: "The ID of the organization managing this episode. Optional.",
+        },
+      },
+      required: ["patientId", "status"],
+    },
+  },
+  {
+    name: "getEpisodeOfCareById",
+    description: "Retrieves an episode of care by its unique ID.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        episodeOfCareId: {
+          type: "string",
+          description: "The unique ID of the episode of care to retrieve.",
+        },
+      },
+      required: ["episodeOfCareId"],
+    },
+  },
+  {
+    name: "updateEpisodeOfCare",
+    description: "Updates an existing episode of care. Requires the episode ID and fields to update.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        episodeOfCareId: {
+          type: "string",
+          description: "The unique ID of the episode of care to update.",
+        },
+        status: {
+          type: "string",
+          description: "New status for the episode of care.",
+          enum: ["planned", "waitlist", "active", "onhold", "finished", "cancelled", "entered-in-error"],
+        },
+      },
+      required: ["episodeOfCareId"],
+    },
+  },
+  {
+    name: "searchEpisodesOfCare",
+    description: "Searches for episodes of care based on criteria like patient ID or status.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        patientId: {
+          type: "string",
+          description: "The patient ID to search episodes for. Optional.",
+        },
+        status: {
+          type: "string",
+          description: "The episode status to filter by. Optional.",
+          enum: ["planned", "waitlist", "active", "onhold", "finished", "cancelled", "entered-in-error"],
+        },
+        managingOrganizationId: {
+          type: "string",
+          description: "The managing organization ID to filter by. Optional.",
+        },
+      },
+      required: [],
+    },
+  },
   // General FHIR Search Tool
   {
     name: "generalFhirSearch",
@@ -650,8 +882,8 @@ server.setRequestHandler(CallToolRequestSchema, async (request: CallToolRequest)
         result = await toolFunction(args[idKey]);
       } else if (toolName.startsWith('update')) {
         // Update tools that take ID and updates object
-        const { patientId, practitionerId, organizationId, encounterId, observationId, medicationRequestId, episodeOfCareId, ...updates } = args;
-        const id = patientId || practitionerId || organizationId || encounterId || observationId || medicationRequestId || episodeOfCareId;
+        const { patientId, practitionerId, organizationId, encounterId, observationId, medicationRequestId, medicationId, episodeOfCareId, ...updates } = args;
+        const id = patientId || practitionerId || organizationId || encounterId || observationId || medicationRequestId || medicationId || episodeOfCareId;
         result = await toolFunction(id, updates);
       } else {
         // Tools that take the whole arguments object

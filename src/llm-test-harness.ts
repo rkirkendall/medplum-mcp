@@ -36,21 +36,55 @@ class MCPChatTestHarness {
         console.log('===============================');
         this.conversationHistory.push({
             role: 'system',
-            content: `You are a healthcare data assistant using a Medplum FHIR server through MCP tools. 
-            You can help users manage healthcare data including patients, practitioners, organizations, encounters, observations, medications, and more.
+            content: `You are a healthcare data assistant using a Medplum FHIR server through MCP tools. You have access to 33 comprehensive FHIR tools for managing healthcare data.
+
+            IMPORTANT: You are capable of multi-step reasoning and chaining multiple tool calls together to complete complex tasks. When a user asks for something that requires multiple steps, perform ALL necessary steps automatically without asking for permission.
+
+            **Multi-Step Tool Chaining Examples:**
+            - If asked about "medications for patient X", first search for the patient, then search for their medications
+            - If asked to "create a prescription for John Doe", first find the patient, then create the medication request
+            - If asked about "all data for patient Y", search for patient, encounters, observations, medications, etc.
+            - Always follow through on tasks completely rather than stopping after the first tool call
+
+            **Available Tool Categories (33 tools total):**
+            - Patient Management: create, get, update, search patients
+            - Practitioner Management: create, get, update, search practitioners  
+            - Organization Management: create, get, update, search organizations
+            - Encounter Management: create, get, update, search encounters
+            - Observation Management: create, get, update, search observations (labs, vitals)
+            - Medication Request Management: create, get, update, search prescriptions
+            - Medication Management: create, get, search medications
+            - Episode of Care Management: create, get, update, search episodes
+            - General FHIR Operations: search any resource type with custom parameters
+
+            **Your Behavior:**
+            1. Analyze the user's request and identify ALL steps needed
+            2. Execute the tool calls in logical sequence  
+            3. Continue until the task is fully complete
+            4. **WHEN YOU NEED CLARIFICATION:** If a tool fails due to missing or unclear parameters, or if you need specific information to proceed, ASK THE USER clearly and specifically what you need
+            5. **DON'T GUESS:** Never repeatedly guess parameters - if something fails more than once, ask for clarification
+            6. Always show clear, helpful results and explain what you found
+            7. Be proactive and thorough - don't stop at partial results
+
+            **When Tool Calls Fail Due to Missing Parameters:**
+            1. **Analyze the context** - Look at what the user said and what they're trying to accomplish
+            2. **Generate reasonable options** - Based on the context, come up with 3-5 likely choices in plain language
+            3. **Ask the user to choose** - Present the options clearly and let them pick
+            4. **Map to technical codes** - Convert their choice to the appropriate FHIR code/parameter
+
+            **Example: If encounter creation fails with "class code required":**
+            - DON'T just say "class code is required" 
+            - DO ask: "What type of visit was this? Was it:
+              • A regular office visit or clinic appointment?
+              • A hospital stay or admission?
+              • An emergency room visit?
+              • A home healthcare visit?
+              • A virtual/telemedicine appointment?"
+            - Then map their answer (office visit → AMB, hospital stay → IMP, emergency → EMER, etc.)
             
-            Available capabilities:
-            - Create, read, update, and search patient records
-            - Manage practitioners (doctors, nurses, etc.)
-            - Handle organizations (hospitals, clinics)
-            - Track encounters (visits, consultations)
-            - Record observations (lab results, vital signs)
-            - Manage medications and prescriptions
-            - Handle episodes of care
-            - Perform general FHIR resource searches
-            
-            When a user asks for something, analyze their request and use the appropriate MCP tools to fulfill it.
-            Always explain what you're doing and show the results clearly.`
+            **This applies to ALL technical parameters** - status codes, observation types, medication codes, etc. Always translate technical requirements into human-friendly choices.
+
+            Remember: You can call multiple tools in sequence to provide comprehensive answers, but always ask for clarification when you're missing essential information!`
         });
     }
 
@@ -137,64 +171,86 @@ class MCPChatTestHarness {
         this.conversationHistory.push({ role: 'user', content: query });
 
         try {
-            // Send to OpenAI with function calling
-            const response = await openai.chat.completions.create({
-                model: 'gpt-4o',
-                messages: this.conversationHistory,
-                tools: this.convertToolsToOpenAIFormat(),
-                tool_choice: 'auto',
-                temperature: 0.1
-            });
+            let maxIterations = 3; // Reduced to encourage asking for help sooner
+            let currentIteration = 0;
+            let assistantResponse = '';
+            let consecutiveFailures = 0;
 
-            const assistantMessage = response.choices[0].message;
-            let assistantResponse = assistantMessage.content || '';
+            while (currentIteration < maxIterations) {
+                currentIteration++;
+                console.log(`\n🔄 Iteration ${currentIteration}:`);
 
-            // Handle tool calls
-            if (assistantMessage.tool_calls && assistantMessage.tool_calls.length > 0) {
-                console.log(`🔧 LLM wants to call ${assistantMessage.tool_calls.length} tool(s):`);
-                
-                const toolResults: string[] = [];
-                
-                for (const toolCall of assistantMessage.tool_calls) {
-                    const toolName = toolCall.function.name;
-                    const toolArgs = JSON.parse(toolCall.function.arguments);
-                    
-                    console.log(`   📞 Calling ${toolName} with args:`, toolArgs);
-                    
-                    try {
-                        const result = await this.callMCPTool(toolName, toolArgs);
-                        console.log(`   ✅ Result:`, JSON.stringify(result, null, 2));
-                        toolResults.push(`Tool ${toolName} result: ${JSON.stringify(result, null, 2)}`);
-                    } catch (error) {
-                        console.log(`   ❌ Error:`, error);
-                        toolResults.push(`Tool ${toolName} error: ${error}`);
-                    }
-                }
-
-                // Send tool results back to OpenAI to get a natural language response
-                const toolMessages = assistantMessage.tool_calls.map((toolCall, index) => ({
-                    role: 'tool' as const,
-                    content: toolResults[index],
-                    tool_call_id: toolCall.id
-                }));
-
-                // Add assistant message and tool results to conversation
-                this.conversationHistory.push({
-                    role: 'assistant',
-                    content: assistantMessage.content,
-                    tool_calls: assistantMessage.tool_calls
-                } as any);
-                
-                this.conversationHistory.push(...toolMessages as any);
-
-                // Get final response from OpenAI
-                const finalResponse = await openai.chat.completions.create({
+                // Send to OpenAI with function calling
+                const response = await openai.chat.completions.create({
                     model: 'gpt-4o',
                     messages: this.conversationHistory,
+                    tools: this.convertToolsToOpenAIFormat(),
+                    tool_choice: 'auto',
                     temperature: 0.1
                 });
 
-                assistantResponse = finalResponse.choices[0].message.content || 'Tool execution completed.';
+                const assistantMessage = response.choices[0].message;
+                assistantResponse = assistantMessage.content || '';
+
+                // Handle tool calls
+                if (assistantMessage.tool_calls && assistantMessage.tool_calls.length > 0) {
+                    console.log(`🔧 LLM wants to call ${assistantMessage.tool_calls.length} tool(s):`);
+                    
+                    const toolResults: string[] = [];
+                    
+                    for (const toolCall of assistantMessage.tool_calls) {
+                        const toolName = toolCall.function.name;
+                        const toolArgs = JSON.parse(toolCall.function.arguments);
+                        
+                        console.log(`   📞 Calling ${toolName} with args:`, toolArgs);
+                        
+                        try {
+                            const result = await this.callMCPTool(toolName, toolArgs);
+                            console.log(`   ✅ Result:`, JSON.stringify(result, null, 2));
+                            
+                            // Check if the result indicates an error (common FHIR pattern)
+                            const resultStr = JSON.stringify(result, null, 2);
+                            if (resultStr.includes('"error":') && resultStr.includes('"success": false')) {
+                                consecutiveFailures++;
+                                toolResults.push(`Tool ${toolName} failed: ${resultStr}. ${consecutiveFailures >= 2 ? 'MULTIPLE FAILURES DETECTED - Consider asking the user for clarification about required parameters.' : ''}`);
+                            } else {
+                                consecutiveFailures = 0; // Reset on success
+                                toolResults.push(`Tool ${toolName} result: ${resultStr}`);
+                            }
+                        } catch (error) {
+                            console.log(`   ❌ Error:`, error);
+                            consecutiveFailures++;
+                            toolResults.push(`Tool ${toolName} error: ${error}. ${consecutiveFailures >= 2 ? 'MULTIPLE FAILURES DETECTED - Consider asking the user for clarification about required parameters.' : ''}`);
+                        }
+                    }
+
+                    // Send tool results back to OpenAI
+                    const toolMessages = assistantMessage.tool_calls.map((toolCall, index) => ({
+                        role: 'tool' as const,
+                        content: toolResults[index],
+                        tool_call_id: toolCall.id
+                    }));
+
+                    // Add assistant message and tool results to conversation
+                    this.conversationHistory.push({
+                        role: 'assistant',
+                        content: assistantMessage.content,
+                        tool_calls: assistantMessage.tool_calls
+                    } as any);
+                    
+                    this.conversationHistory.push(...toolMessages as any);
+
+                    // Continue the loop to see if more tool calls are needed
+                    continue;
+                } else {
+                    // No more tool calls, we have the final response
+                    console.log(`✅ Final response after ${currentIteration} iteration(s)`);
+                    break;
+                }
+            }
+
+            if (currentIteration >= maxIterations) {
+                assistantResponse += "\n\n(Note: Reached maximum iteration limit. Task may not be fully complete.)";
             }
 
             // Add final response to conversation history
@@ -219,6 +275,7 @@ class MCPChatTestHarness {
         console.log('   - "Show me the latest observations for patient ID 123"');
         console.log('   - Type "help" for more examples');
         console.log('   - Type "tools" to see all available tools');
+
         console.log('   - Type "quit" to exit\n');
 
         while (true) {
@@ -226,7 +283,8 @@ class MCPChatTestHarness {
             
             if (userInput.toLowerCase() === 'quit' || userInput.toLowerCase() === 'exit') {
                 console.log('👋 Goodbye!');
-                break;
+                await this.cleanup();
+                process.exit(0);
             }
             
             if (userInput.toLowerCase() === 'help') {
@@ -244,6 +302,8 @@ class MCPChatTestHarness {
                 console.log('🗑️  Conversation history cleared.');
                 continue;
             }
+
+
 
             if (userInput.trim() === '') {
                 continue;
@@ -304,8 +364,11 @@ class MCPChatTestHarness {
         console.log();
     }
 
+
+
     async cleanup() {
         try {
+            console.log('🧹 Cleaning up...');
             if (this.client) {
                 await this.client.close();
             }
@@ -313,7 +376,13 @@ class MCPChatTestHarness {
                 await this.transport.close();
             }
             if (this.serverProcess) {
-                this.serverProcess.kill();
+                this.serverProcess.kill('SIGTERM');
+                // Force kill after 2 seconds if it doesn't terminate
+                setTimeout(() => {
+                    if (this.serverProcess && !this.serverProcess.killed) {
+                        this.serverProcess.kill('SIGKILL');
+                    }
+                }, 2000);
             }
         } catch (error) {
             console.error('Error during cleanup:', error);
@@ -335,6 +404,17 @@ async function main() {
         console.log('\n🛑 Shutting down...');
         await harness.cleanup();
         process.exit(0);
+    });
+
+    process.on('SIGTERM', async () => {
+        console.log('\n🛑 Terminating...');
+        await harness.cleanup();
+        process.exit(0);
+    });
+
+    // Handle unexpected exit
+    process.on('exit', () => {
+        console.log('👋 Process exiting...');
     });
 
     try {
