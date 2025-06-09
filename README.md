@@ -37,50 +37,58 @@ The server implements the full MCP protocol specification, providing 33 comprehe
 
 ## 🌟 Features Implemented
 
-The MCP server currently supports a robust set of tools for managing various FHIR resources:
+The MCP server currently supports a comprehensive set of **33 tools** for managing various FHIR resources:
 
-*   **Patient Management (`src/tools/patientUtils.ts`)**:
-    *   `createPatient`: Create new patient records.
-    *   `getPatientById`: Retrieve patient details by ID.
-    *   `updatePatient`: Modify existing patient information.
-    *   `searchPatients`: Find patients based on various criteria.
-*   **Practitioner Management (`src/tools/practitionerUtils.ts`)**:
-    *   `createPractitioner`: Register new practitioners.
-    *   `getPractitionerById`: Fetch practitioner details by ID.
-    *   `updatePractitioner`: Update practitioner information.
-    *   `searchPractitionersByName`: Search for practitioners using their name.
-    *   `searchPractitioners`: Conduct general searches for practitioners based on multiple criteria.
-*   **Organization Management (`src/tools/organizationUtils.ts`)**:
-    *   `createOrganization`: Add new healthcare organizations.
-    *   `getOrganizationById`: Retrieve organization details by ID.
-    *   `updateOrganization`: Update organization information.
-    *   `searchOrganizations`: Search for organizations.
-*   **Observation Management (`src/tools/observationUtils.ts`)**:
-    *   `createObservation`: Record new observations (e.g., lab results, vital signs).
-    *   `getObservationById`: Get observation details by ID.
-    *   `updateObservation`: Modify existing observations.
-    *   `searchObservations`: Search for observations.
-*   **Medication Request Management (`src/tools/medicationRequestUtils.ts`)**:
-    *   `createMedicationRequest`: Create new medication requests (prescriptions).
-    *   `getMedicationRequestById`: Retrieve medication request details by ID.
-    *   `updateMedicationRequest`: Update medication request information.
-    *   `searchMedicationRequests`: Search for medication requests.
-*   **Medication Management (`src/tools/medicationUtils.ts`)**:
-    *   `createMedication`: Create new medication resources.
-    *   `getMedicationById`: Retrieve medication details by ID.
-    *   `searchMedications`: Search for medications by code or name.
-*   **Episode of Care Management (`src/tools/episodeOfCareUtils.ts`)**:
-    *   `createEpisodeOfCare`: Create new episodes of care for patients.
-    *   `getEpisodeOfCareById`: Retrieve episode of care details by ID.
-    *   `updateEpisodeOfCare`: Update episode of care information.
-    *   `searchEpisodesOfCare`: Search for episodes of care.
-*   **Encounter Management (`src/tools/encounterUtils.ts`)**:
-    *   `createEncounter`: Create new patient encounters.
-    *   `getEncounterById`: Retrieve encounter details by ID.
-    *   `updateEncounter`: Update encounter information.
-    *   `searchEncounters`: Search for encounters.
-*   **General FHIR Operations**:
-    *   `generalFhirSearch`: Generic FHIR search with custom parameters for any resource type.
+### 👥 **Patient Management (4 tools)** - `src/tools/patientUtils.ts`
+*   `createPatient`: Create new patient records with demographics, identifiers, and contact information.
+*   `getPatientById`: Retrieve complete patient details by their unique ID.
+*   `updatePatient`: Modify existing patient information including demographics and contact details.
+*   `searchPatients`: Find patients based on name, birthdate, identifier, or other criteria.
+
+### 👩‍⚕️ **Practitioner Management (5 tools)** - `src/tools/practitionerUtils.ts`
+*   `createPractitioner`: Register new healthcare practitioners with their professional details.
+*   `getPractitionerById`: Fetch complete practitioner details by their unique ID.
+*   `updatePractitioner`: Update practitioner information including qualifications and contact details.
+*   `searchPractitionersByName`: Search for practitioners using their first or last name.
+*   `searchPractitioners`: Conduct advanced searches for practitioners based on multiple criteria.
+
+### 🏥 **Organization Management (4 tools)** - `src/tools/organizationUtils.ts`
+*   `createOrganization`: Add new healthcare organizations (hospitals, clinics, departments).
+*   `getOrganizationById`: Retrieve complete organization details by their unique ID.
+*   `updateOrganization`: Update organization information including contact details and addresses.
+*   `searchOrganizations`: Search for organizations by name, type, or other attributes.
+
+### 🏥 **Encounter Management (4 tools)** - `src/tools/encounterUtils.ts`
+*   `createEncounter`: Create new patient encounters (visits, appointments, hospital stays).
+*   `getEncounterById`: Retrieve complete encounter details by their unique ID.
+*   `updateEncounter`: Update encounter information including status, class, and participants.
+*   `searchEncounters`: Search for encounters by patient, practitioner, date, status, or class.
+
+### 🔬 **Observation Management (4 tools)** - `src/tools/observationUtils.ts`
+*   `createObservation`: Record new observations (lab results, vital signs, diagnostic findings).
+*   `getObservationById`: Retrieve complete observation details by their unique ID.
+*   `updateObservation`: Modify existing observations including values, status, and interpretations.
+*   `searchObservations`: Search for observations by patient, code, date, or encounter.
+
+### 💊 **Medication Request Management (4 tools)** - `src/tools/medicationRequestUtils.ts`
+*   `createMedicationRequest`: Create new medication requests (prescriptions) with dosage and instructions.
+*   `getMedicationRequestById`: Retrieve complete medication request details by their unique ID.
+*   `updateMedicationRequest`: Update prescription information including status, dosage, and instructions.
+*   `searchMedicationRequests`: Search for medication requests by patient, medication, or prescriber.
+
+### 💉 **Medication Management (3 tools)** - `src/tools/medicationUtils.ts`
+*   `createMedication`: Create new medication resources with codes, names, and formulations.
+*   `getMedicationById`: Retrieve complete medication details by their unique ID.
+*   `searchMedications`: Search for medications by code, name, or ingredient.
+
+### 📋 **Episode of Care Management (4 tools)** - `src/tools/episodeOfCareUtils.ts`
+*   `createEpisodeOfCare`: Create new episodes of care for managing patient care over time.
+*   `getEpisodeOfCareById`: Retrieve complete episode of care details by their unique ID.
+*   `updateEpisodeOfCare`: Update episode information including status, period, and managing organization.
+*   `searchEpisodesOfCare`: Search for episodes of care by patient, status, or managing organization.
+
+### 🔍 **General FHIR Operations (1 tool)**
+*   `generalFhirSearch`: Generic FHIR search with custom parameters for any resource type, enabling advanced queries across all FHIR resources.
 
 Each tool is exposed to the LLM via a well-defined JSON schema and is callable through a dedicated test harness (`src/llm-test-harness.ts`), facilitating robust testing and integration.
 
