@@ -170,6 +170,42 @@ For each resource, we need tools for `create`, `readById`, `update`, and `search
         - Utility functions in `src/tools/episodeOfCareUtils.ts`.
         - Integration tests in `tests/integration/episodeOfCare.integration.test.ts` passed.
 
+- [ ] **Tool: `manageCondition`**
+    - Description: Handles Condition resources (diagnoses, problems, health concerns, clinical findings).
+    - Sub-actions:
+        - `createCondition(details: CreateConditionArgs)`: Creates new diagnosis/condition for a patient.
+        - `getConditionById(id: string)`: Retrieves condition details by ID.
+        - `updateCondition(id: string, updates: UpdateConditionArgs)`: Updates condition status, severity, etc.
+        - `searchConditions(criteria: ConditionSearchArgs)`: Searches conditions by patient, code, category, clinical status.
+    - Notes: Central to clinical workflows. Key fields include `code` (ICD-10, SNOMED CT), `clinicalStatus` (active, inactive, resolved), `verificationStatus` (confirmed, provisional), `category` (problem-list-item, encounter-diagnosis), `subject`, `encounter`, `onsetDateTime`, `recordedDate`.
+        - Examples: "Type 2 Diabetes", "Hypertension", "Broken leg", "Major depressive disorder"
+        - Links to Patient, Encounter, and can reference supporting Observations
+        - Essential for care planning, quality metrics, and clinical decision support
+
+- [ ] **Tool: `manageDiagnosticReport`**
+    - Description: Handles DiagnosticReport resources (findings and interpretations of diagnostic tests).
+    - Sub-actions:
+        - `createDiagnosticReport(details: CreateDiagnosticReportArgs)`: Creates new diagnostic report with findings.
+        - `getDiagnosticReportById(id: string)`: Retrieves diagnostic report details by ID.
+        - `updateDiagnosticReport(id: string, updates: UpdateDiagnosticReportArgs)`: Updates report status, conclusions, etc.
+        - `searchDiagnosticReports(criteria: DiagnosticReportSearchArgs)`: Searches reports by patient, code, category, date.
+    - Notes: Aggregates and interprets diagnostic findings. Key fields include `code` (LOINC for lab panels, SNOMED for imaging), `status` (registered, partial, preliminary, final), `category` (LAB, RAD, PATH, etc.), `subject`, `encounter`, `result` (references to Observations), `conclusion`, `conclusionCode`.
+        - Examples: "Complete Blood Count", "Chest X-Ray Report", "Pathology Report", "Cardiac Stress Test"
+        - Links individual Observations into comprehensive diagnostic findings
+        - Critical for clinical interpretation and medical decision-making
+
+- [ ] **Tool: `manageProcedure`**
+    - Description: Handles Procedure resources (actions performed on patients).
+    - Sub-actions:
+        - `createProcedure(details: CreateProcedureArgs)`: Records new procedure performed on patient.
+        - `getProcedureById(id: string)`: Retrieves procedure details by ID.
+        - `updateProcedure(id: string, updates: UpdateProcedureArgs)`: Updates procedure status, outcome, etc.
+        - `searchProcedures(criteria: ProcedureSearchArgs)`: Searches procedures by patient, code, category, date.
+    - Notes: Documents interventions and actions. Key fields include `code` (CPT, SNOMED CT, ICD-10-PCS), `status` (preparation, in-progress, completed, stopped), `category` (surgical, diagnostic, therapeutic), `subject`, `encounter`, `performedDateTime`, `performer`, `reasonCode`, `reasonReference`, `outcome`, `bodySite`.
+        - Examples: "Appendectomy", "Colonoscopy", "Physical Therapy", "Blood Draw", "Surgical Wound Cleaning"
+        - Links to Patient, Encounter, Practitioner, and can reference Conditions as reasons
+        - Essential for billing, care coordination, and clinical documentation
+
 - [x] **Tool: `GeneralFhirSearch`**
     - Description: A more generic search tool if specific resource type is unknown or for broader queries.
     - Action: `searchResource(resourceType: FHIR_RESOURCE_TYPE, queryParams: Record<string, string | number | boolean | string[]>)`
