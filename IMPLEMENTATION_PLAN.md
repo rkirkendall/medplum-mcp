@@ -170,17 +170,21 @@ For each resource, we need tools for `create`, `readById`, `update`, and `search
         - Utility functions in `src/tools/episodeOfCareUtils.ts`.
         - Integration tests in `tests/integration/episodeOfCare.integration.test.ts` passed.
 
-- [ ] **Tool: `manageCondition`**
+- [x] **Tool: `manageCondition`**
     - Description: Handles Condition resources (diagnoses, problems, health concerns, clinical findings).
     - Sub-actions:
-        - `createCondition(details: CreateConditionArgs)`: Creates new diagnosis/condition for a patient.
-        - `getConditionById(id: string)`: Retrieves condition details by ID.
-        - `updateCondition(id: string, updates: UpdateConditionArgs)`: Updates condition status, severity, etc.
-        - `searchConditions(criteria: ConditionSearchArgs)`: Searches conditions by patient, code, category, clinical status.
+        - [x] `createCondition(details: CreateConditionArgs)`: Creates new diagnosis/condition for a patient.
+        - [x] `getConditionById(id: string)`: Retrieves condition details by ID.
+        - [x] `updateCondition(id: string, updates: UpdateConditionArgs)`: Updates condition status, severity, etc.
+        - [x] `searchConditions(criteria: ConditionSearchArgs)`: Searches conditions by patient, code, category, clinical status.
     - Notes: Central to clinical workflows. Key fields include `code` (ICD-10, SNOMED CT), `clinicalStatus` (active, inactive, resolved), `verificationStatus` (confirmed, provisional), `category` (problem-list-item, encounter-diagnosis), `subject`, `encounter`, `onsetDateTime`, `recordedDate`.
         - Examples: "Type 2 Diabetes", "Hypertension", "Broken leg", "Major depressive disorder"
         - Links to Patient, Encounter, and can reference supporting Observations
         - Essential for care planning, quality metrics, and clinical decision support
+        - Schemas defined in `src/tools/toolSchemas.ts`.
+        - Utility functions in `src/tools/conditionUtils.ts`.
+        - Integration tests in `tests/integration/condition.integration.test.ts` passed.
+        - Fully integrated into MCP server with argument transformation logic.
 
 - [ ] **Tool: `manageDiagnosticReport`**
     - Description: Handles DiagnosticReport resources (findings and interpretations of diagnostic tests).

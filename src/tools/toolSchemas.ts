@@ -694,7 +694,134 @@ export const toolSchemas = [
       },
       required: ['resourceType', 'queryParams']
     }
-  }
+  },
+  // Condition Tool Schemas
+  {
+    name: 'createCondition',
+    description:
+      'Creates a new condition or diagnosis for a patient. Requires a patient ID and a condition code.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        patientId: {
+          type: 'string',
+          description: 'The ID of the patient for whom the condition is being created.',
+        },
+        code: {
+          type: 'object',
+          description:
+            'The code representing the condition. Must include a coding system, code, and display text.',
+          properties: {
+            coding: {
+              type: 'array',
+              items: {
+                type: 'object',
+                properties: {
+                  system: {
+                    type: 'string',
+                    description: 'The URI of the coding system (e.g., "http://snomed.info/sct").',
+                  },
+                  code: { type: 'string', description: 'The code from the system (e.g., "44054006").' },
+                  display: {
+                    type: 'string',
+                    description:
+                      'The human-readable display text for the code (e.g., "Type 2 diabetes mellitus").',
+                  },
+                },
+                required: ['system', 'code', 'display'],
+              },
+            },
+            text: { type: 'string', description: 'A human-readable summary of the condition.' },
+          },
+          required: ['coding', 'text'],
+        },
+        clinicalStatus: {
+          type: 'string',
+          description: 'The clinical status of the condition. For example: "active", "inactive", "resolved".',
+          enum: ['active', 'recurrence', 'relapse', 'inactive', 'remission', 'resolved'],
+        },
+        onsetString: {
+          type: 'string',
+          description:
+            'Estimated date, state, or age when the condition began (e.g., "about 3 years ago"). Optional.',
+        },
+        recordedDate: {
+          type: 'string',
+          description: 'The date the condition was recorded, in YYYY-MM-DD format. Optional.',
+        },
+      },
+      required: ['patientId', 'code'],
+    },
+  },
+  {
+    name: 'getConditionById',
+    description: 'Retrieves a condition resource by its unique ID.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        conditionId: {
+          type: 'string',
+          description: 'The unique ID of the condition to retrieve.',
+        },
+      },
+      required: ['conditionId'],
+    },
+  },
+  {
+    name: 'updateCondition',
+    description: 'Updates an existing condition. Requires the condition ID and at least one field to update.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        conditionId: {
+          type: 'string',
+          description: 'The unique ID of the condition to update.',
+        },
+        clinicalStatus: {
+          type: 'string',
+          description: 'The new clinical status of the condition.',
+          enum: ['active', 'recurrence', 'relapse', 'inactive', 'remission', 'resolved'],
+        },
+        verificationStatus: {
+          type: 'string',
+          description: 'The new verification status of the condition.',
+          enum: ['unconfirmed', 'provisional', 'differential', 'confirmed', 'refuted', 'entered-in-error'],
+        },
+        onsetString: {
+          type: 'string',
+          description: 'Update the onset description. To remove this field, provide a `null` value.',
+        },
+      },
+      required: ['conditionId'],
+    },
+  },
+  {
+    name: 'searchConditions',
+    description: 'Searches for conditions based on patient and other criteria. Requires a patient ID.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        patientId: {
+          type: 'string',
+          description: "The ID of the patient whose conditions are being searched.",
+        },
+        code: {
+          type: 'string',
+          description: 'A code to filter by, e.g., "http://snomed.info/sct|44054006". Optional.',
+        },
+        'clinical-status': {
+          type: 'string',
+          description: 'Filter by clinical status.',
+          enum: ['active', 'recurrence', 'relapse', 'inactive', 'remission', 'resolved'],
+        },
+        category: {
+          type: 'string',
+          description: 'Filter by category, e.g., "encounter-diagnosis" or "problem-list-item".',
+        },
+      },
+      required: ['patientId'],
+    },
+  },
 ];
 
 // Helper definition for EpisodeOfCare type items, used in create/update schemas via $ref
