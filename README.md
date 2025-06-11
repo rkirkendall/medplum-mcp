@@ -4,6 +4,10 @@
 
 This project implements a **complete Model Context Protocol (MCP) server** designed to seamlessly interact with a Medplum FHIR server. The MCP server provides a standardized interface, enabling Large Language Models (LLMs) to perform Create, Read, Update, and Search (CRUDS) operations on various FHIR resources through a comprehensive suite of tools. This empowers users to manage healthcare data stored in Medplum using natural language commands through any MCP-compatible client (Claude Desktop, VS Code MCP extensions, etc.).
 
+<a href="https://glama.ai/mcp/servers/@rkirkendall/medplum-mcp">
+  <img width="380" height="200" src="https://glama.ai/mcp/servers/@rkirkendall/medplum-mcp/badge" alt="Medplum Server MCP server" />
+</a>
+
 The server implements the full MCP protocol specification, providing 33 comprehensive FHIR resource management tools that can be discovered and executed by any MCP client. Users can intuitively manage patient information, practitioners, organizations, encounters, observations, and more by conversing with an LLM that leverages the MCP tools to execute requests against the FHIR server.
 
 ## ✨ Current Status
